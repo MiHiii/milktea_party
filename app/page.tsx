@@ -1,65 +1,242 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import {
+  Loader2, Plus, ChevronRight, Coffee, Users, Share2, Wallet,
+  DoorOpen, ChevronDown, ChevronUp, Eye, EyeOff, Clock
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { getOrCreateDeviceId, setParticipantId } from '@/lib/identity'
+import { BANK_OPTIONS } from '@/lib/vietqr'
+import { generateSlug } from '@/lib/slug'
+
+const schema = z.object({
+  title: z.string().min(1, 'Tên đơn không được để trống').max(100),
+  shopLink: z.string().url('Link không hợp lệ').optional().or(z.literal('')),
+  bankName: z.string().optional().or(z.literal('')),
+  bankAccount: z.string().optional().or(z.literal('')),
+  shippingFee: z.coerce.number().min(0).default(0),
+  hostName: z.string().min(1, 'Tên của bạn không được để trống').max(50),
+  sessionPassword: z.string().max(100).optional().or(z.literal('')),
+})
+
+type FormData = z.infer<typeof schema>
+
+export default function HomePage() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [createError, setCreateError] = useState('')
+
+  // Join room state
+  const [joinId, setJoinId] = useState('')
+  const [joinLoading, setJoinLoading] = useState(false)
+  const [joinError, setJoinError] = useState('')
+
+  const { register, handleSubmit, watch, formState: { errors }, setValue } = useForm<FormData>({
+    resolver: zodResolver(schema) as any,
+    defaultValues: { shippingFee: 0 },
+  })
+
+  const onSubmit = async (data: FormData) => {
+    setLoading(true)
+    try {
+      const deviceId = getOrCreateDeviceId()
+
+      const res = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: data.title,
+          shopLink: data.shopLink,
+          hostDeviceId: deviceId,
+          hostName: data.hostName,
+          password: showPassword ? data.sessionPassword : undefined,
+        }),
+      })
+
+      if (!res.ok) throw new Error('Failed to create session')
+      const json = await res.json()
+
+      if (json.participantId) {
+        setParticipantId(json.session.id, json.participantId)
+      }
+
+      router.push(`/s/${json.session.slug}`)
+    } catch (e) {
+      console.error(e)
+      setCreateError('Có lỗi xảy ra khi tạo đơn. Vui lòng thử lại!')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-dvh flex flex-col">
+      {/* Hero */}
+      <header className="pt-20 pb-12 px-4 text-center fade-in slide-up">
+        <div className="inline-flex items-center gap-2 bg-sky-500/20 border border-sky-500/30 rounded-full px-4 py-1.5 text-sm text-sky-300 mb-8 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
+          <span className="live-dot inline-block w-2 h-2 bg-emerald-400 rounded-full" />
+          Gọi đồ nhóm · Chia tiền siêu nhanh
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        <h1 className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-sky-200 to-indigo-400 mb-4 tracking-tight drop-shadow-sm">
+          MilkTea Party 🧋
+        </h1>
+        <p className="text-white/60 text-lg max-w-sm mx-auto leading-relaxed">
+          Tạo đơn, chia sẻ link, tự động chia tiền ship &amp; giảm giá. Không cần tài khoản!
+        </p>
+      </header>
+
+      {/* Features */}
+      <div className="grid grid-cols-3 gap-3 px-4 max-w-md mx-auto w-full mb-12 fade-in" style={{ animationDelay: '100ms' }}>
+        {[
+          { icon: Users, label: 'Cùng đặt' },
+          { icon: Share2, label: 'Share link' },
+          { icon: Wallet, label: 'Tự chia tiền' },
+        ].map(({ icon: Icon, label }) => (
+          <div key={label} className="glass rounded-xl p-4 text-center flex flex-col items-center gap-2 hover:bg-white/10 transition-colors">
+            <Icon className="w-6 h-6 text-sky-400" />
+            <span className="text-xs text-white/70 font-medium">{label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Form area */}
+      <div className="flex-1 px-4 pb-12 max-w-md mx-auto w-full flex flex-col gap-4">
+
+        {/* Create form */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Coffee className="w-5 h-5 text-sky-400" />
+              Tạo đơn mới
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+              <Input
+                id="hostName"
+                label="Tên của bạn (Host)"
+                placeholder="Ví dụ: Hùng"
+                error={errors.hostName?.message}
+                {...register('hostName')}
+              />
+              <Input
+                id="title"
+                label="Tên đơn"
+                placeholder="Ví dụ: Trà sữa chiều thứ 6"
+                error={errors.title?.message}
+                {...register('title')}
+              />
+              <Input
+                id="shopLink"
+                label="Link shop / menu (tuỳ chọn)"
+                placeholder="https://shopeefood.vn/..."
+                error={errors.shopLink?.message}
+                {...register('shopLink')}
+              />
+
+              {/* Password option */}
+              <div className="flex flex-col gap-2 mt-2">
+                <label className="flex items-center gap-2 text-sm text-white/80 cursor-pointer w-fit">
+                  <input
+                    type="checkbox"
+                    checked={showPassword}
+                    onChange={(e) => setShowPassword(e.target.checked)}
+                    className="custom-checkbox"
+                  />
+                  Bảo vệ bằng mật khẩu
+                </label>
+
+                {showPassword && (
+                  <div className="relative animate-in slide-in-from-top-2 duration-200">
+                    <input
+                      id="sessionPassword"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Nhập mật khẩu..."
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:border-sky-500/50 pr-10 text-sm"
+                      {...register('sessionPassword')}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {createError && (
+                <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 text-xs text-rose-400 mt-2 animate-in fade-in slide-in-from-top-1">
+                  {createError}
+                </div>
+              )}
+
+              <Button type="submit" size="lg" disabled={loading} className="mt-2 w-full">
+                {loading ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Đang tạo...</>
+                ) : (
+                  <><Plus className="w-4 h-4" /> Tạo nhóm ngay <ChevronRight className="w-4 h-4" /></>
+                )}
+              </Button>
+            </form>
+            <div className="mt-4 pt-4 border-t border-white/5 flex justify-center">
+              <a href="/history" className="text-xs text-white/40 hover:text-sky-400 flex items-center gap-1.5 transition-colors">
+                <Clock className="w-3.5 h-3.5" /> Xem lịch sử các đơn cũ
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Join form */}
+        <Card className="bg-white/5 border-white/10 mt-4">
+          <CardContent className="pt-6">
+            <h3 className="text-sm font-semibold text-white/80 flex items-center gap-2 mb-3">
+              <DoorOpen className="w-4 h-4 text-emerald-400" />
+              Vào đơn đã có
+            </h3>
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <Input
+                  className="bg-black/20 font-mono text-sm placeholder:font-sans"
+                  placeholder="Nhập mã đơn (VD: ngon-sua-vits)"
+                  value={joinId}
+                  onChange={(e) => {
+                    // Strip # and spaces, lowercase
+                    const val = e.target.value.replace(/[#\s]+/g, '-').toLowerCase()
+                    setJoinId(val)
+                    setJoinError('')
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      const slug = joinId.trim().replace(/^#/, '')
+                      if (slug) router.push(`/s/${slug}`)
+                    }
+                  }}
+                />
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    const slug = joinId.trim().replace(/^#/, '')
+                    if (slug) router.push(`/s/${slug}`)
+                  }}
+                  disabled={!joinId.trim() || joinLoading}
+                >
+                  Vào ngay
+                </Button>
+              </div>
+              {joinError && <p className="text-xs text-rose-400 px-1">{joinError}</p>}
+            </div>
+          </CardContent>
+        </Card>
+
+        <p className="text-center text-white/20 text-[10px] mt-2">
+          Gợi ý: Dùng trình duyệt thường (không ẩn danh) để lưu lại lịch sử
+        </p>
+      </div>
     </div>
-  );
+  )
 }
