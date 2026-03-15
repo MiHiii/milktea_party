@@ -25,7 +25,9 @@ export function getOrCreateDeviceId(): string {
 
 export function getParticipantId(sessionId: string): string | null {
   if (typeof window === 'undefined') return null
-  return localStorage.getItem(`p_id_${sessionId}`)
+  const id = localStorage.getItem(`p_id_${sessionId}`)
+  if (id === 'undefined' || id === 'null' || !id) return null
+  return id
 }
 
 export function setParticipantId(sessionId: string, participantId: string): void {

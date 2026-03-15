@@ -8,9 +8,9 @@ const AddItemSchema = z.object({
   itemName: z.string().min(1).max(200),
   price: z.number().min(0),
   quantity: z.number().min(1).max(99).default(1),
-  note: z.string().max(200).optional(),
-  ice: z.string().optional(),
-  sugar: z.string().optional(),
+  note: z.string().max(200).nullable().optional(),
+  ice: z.string().nullable().optional(),
+  sugar: z.string().nullable().optional(),
   order_batch_id: z.string().uuid().nullable().optional(),
   pay_separate: z.boolean().optional(),
 })
@@ -20,7 +20,10 @@ export async function POST(request: Request) {
   const parsed = AddItemSchema.safeParse(body)
 
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+    return NextResponse.json({ 
+      error: 'Invalid data', 
+      details: parsed.error.flatten() 
+    }, { status: 400 })
   }
 
   const { participantId, sessionId, itemName, price, quantity, note, ice, sugar, order_batch_id } = parsed.data

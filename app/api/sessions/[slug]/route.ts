@@ -121,8 +121,20 @@ export async function PATCH(
           await (supabase.from('order_items') as any).update({ order_batch_id: defaultBatch.id }).eq('session_id', session.id).is('order_batch_id', null)
         }
       } else {
-        const { data: defaultBatch } = await (supabase.from('order_batches') as any).select('id').eq('session_id', session.id).eq('is_default', true).maybeSingle()
+        const { data: defaultBatch } = await (supabase.from('order_batches') as any)
+          .select('id, bank_name, bank_account, qr_payload')
+          .eq('session_id', session.id)
+          .eq('is_default', true)
+          .maybeSingle()
+
         if (defaultBatch) {
+          // Sync bank info from Default Batch to Session when turning OFF split
+          if (defaultBatch.qr_payload) {
+            updates.host_default_bank_name = defaultBatch.bank_name
+            updates.host_default_bank_account = defaultBatch.bank_account
+            updates.host_default_qr_payload = defaultBatch.qr_payload
+          }
+
           await (supabase.from('order_items') as any).update({ order_batch_id: defaultBatch.id }).eq('session_id', session.id)
           await (supabase.from('order_batches') as any).delete().eq('session_id', session.id).eq('is_default', false)
         }

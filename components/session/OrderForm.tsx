@@ -137,7 +137,6 @@ export function OrderForm({
                 className="w-full bg-emerald-500/5 border border-emerald-500/20 rounded-xl pl-10 pr-10 h-11 text-base text-emerald-400 font-bold appearance-none focus:outline-none focus:border-emerald-500/40 transition-all" 
                 {...register('order_batch_id')}
               >
-                <option value="" className="bg-slate-900 text-white">Mặc định</option>
                 {orderBatches.map(b => (
                   <option key={b.id} value={b.id} className="bg-slate-900 text-white">{b.name}</option>
                 ))}
@@ -151,13 +150,13 @@ export function OrderForm({
         <div className="flex items-center justify-between px-1 mt-1">
           <div className="flex items-center gap-3">
             <label className="relative flex items-center justify-center cursor-pointer group">
-              <input type="checkbox" {...register('paySeparate')} className="peer sr-only" />
+              <input type="checkbox" {...register('pay_separate')} className="peer sr-only" />
               <div className="w-6 h-6 rounded-full border-2 border-white/10 flex items-center justify-center transition-all peer-checked:bg-sky-500 peer-checked:border-sky-500 peer-checked:scale-110 active:scale-90">
                 <Check className="w-4 h-4 text-white scale-0 transition-transform peer-checked:scale-100" />
               </div>
             </label>
             <span 
-              onClick={() => setValue('paySeparate', !watch('paySeparate'))} 
+              onClick={() => setValue('pay_separate', !watch('pay_separate'))} 
               className="text-xs text-white/50 cursor-pointer select-none font-medium hover:text-white/70 transition-colors"
             >
               Tạo mã QR thanh toán riêng cho món này

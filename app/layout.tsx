@@ -1,28 +1,15 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 
-// Internal RangeError fix for String.repeat(-21) happening in some dependencies in this environment
-if (typeof String.prototype.repeat === 'function') {
-  const originalRepeat = String.prototype.repeat;
-  String.prototype.repeat = function(count) {
-    if (count < 0) {
-      if (typeof window === 'undefined') {
-        try {
-          const fs = require('fs');
-          const stack = new Error().stack;
-          fs.appendFileSync('error_debug.log', `[${new Date().toISOString()}] Invalid count: ${count}\nStack: ${stack}\n\n`);
-        } catch (e) {
-          // ignore
-        }
-      }
-      return '';
-    }
-    return originalRepeat.call(this, count);
-  };
-}
-
 const inter = Inter({ subsets: ['latin'] })
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
 
 export const metadata: Metadata = {
   title: 'MilkTea Party 🧋 - Gọi đồ nhóm dễ dàng',

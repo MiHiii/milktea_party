@@ -1,5 +1,6 @@
 'use client'
 
+import * as React from 'react'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter 
@@ -11,7 +12,7 @@ interface ConfirmModalProps {
   onClose: () => void
   onConfirm: () => void
   title: string
-  description: string
+  description: React.ReactNode
   confirmText?: string
   cancelText?: string
   variant?: 'primary' | 'destructive'
@@ -37,9 +38,9 @@ export function ConfirmModal({
             <AlertTriangle className="w-8 h-8" />
           </div>
           <DialogTitle className="text-xl font-bold text-white">{title}</DialogTitle>
-          <p className="text-sm text-white/60 leading-relaxed">
+          <div className="text-sm text-white/60 leading-relaxed">
             {description}
-          </p>
+          </div>
         </DialogHeader>
         <DialogFooter className="flex flex-row gap-3 mt-6">
           <Button 
