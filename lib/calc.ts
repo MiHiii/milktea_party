@@ -1,100 +1,108 @@
-import { Session, Participant, OrderItem, BillEntry, ItemBill } from '@/lib/types'
+import { Session, Participant, OrderItem, BillEntry, ItemBill, OrderBatch } from '@/lib/types'
 
 /**
- * Round amount to nearest 500 VND.
+ * Round amount to nearest 1000 VND.
  */
-export function roundTo500(amount: number): number {
-  return Math.round(amount / 500) * 500
+export function roundTo1000(amount: number): number {
+  return Math.round(amount / 1000) * 1000
 }
 
-/**
- * Calculate subtotal for a participant's items.
- */
 export function calcSubtotal(items: OrderItem[]): number {
   return items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 }
 
-/**
- * Calculate the grand total for all items in a session.
- */
 export function calcGrandTotal(items: OrderItem[]): number {
   return items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 }
 
-/**
- * Calculate discount factor based on session discount settings.
- * - 'percent': F = (100 - discountValue) / 100
- * - 'amount': F = (T - discountValue) / T  (where T = grand total)
- */
-export function calcDiscountFactor(
-  discountType: 'amount' | 'percent',
-  discountValue: number,
-  grandTotal: number
-): number {
-  if (discountValue <= 0) return 1
-
-  if (discountType === 'percent') {
-    return (100 - discountValue) / 100
-  } else {
-    if (grandTotal <= 0) return 1
-    return (grandTotal - discountValue) / grandTotal
-  }
+function calcDiscountFactor(type: 'amount' | 'percent', value: number, total: number): number {
+  if (total <= 0) return 1
+  if (type === 'percent') return Math.max(0, (100 - value) / 100)
+  return Math.max(0, (total - value) / total)
 }
 
 /**
  * Calculate each participant's bill breakdown.
- * If an item is marked 'pay_separate', it gets its own entry.
  */
 export function calculateBill(
   session: Session,
-  participants: Participant[],
-  allItems: OrderItem[]
+  participants: Participant[] = [],
+  allItems: OrderItem[] = [],
+  batches: OrderBatch[] = []
 ): BillEntry[] {
-  // If not splitting by batch, use the existing global logic
+  const sessionConfigs = (session.batch_configs as Record<string, any>) || {}
+  const personalDiscounts = sessionConfigs.personalDiscounts || {}
+
+  // 1. SINGLE BATCH MODE
   if (!session.is_split_batch) {
     const itemsGrandTotal = calcGrandTotal(allItems)
-    const finalBillTotal = itemsGrandTotal - session.discount_value + session.shipping_fee
-    const billFactor = itemsGrandTotal > 0 ? finalBillTotal / itemsGrandTotal : 1
-    const discountFactor = calcDiscountFactor(session.discount_type, session.discount_value, itemsGrandTotal)
-
-    return participants.map(participant => {
-      const myItems = allItems.filter(i => i.participant_id === participant.id)
+    
+    // First, apply personal discounts to subtotals to see what's left for global discount
+    let totalAfterPersonalDiscounts = 0
+    const participantData = (participants || []).map(p => {
+      const myItems = allItems.filter(i => i.participant_id === p.id)
       const subtotal = calcSubtotal(myItems)
-      const afterDiscountTotal = subtotal * discountFactor
-      const shipShareTotal = (subtotal / itemsGrandTotal) * session.shipping_fee || 0
-      const total = roundTo500(subtotal * billFactor)
+      
+      const pDiscCfg = personalDiscounts[p.id] || { type: 'amount', value: 0 }
+      let pDiscAmount = 0
+      if (pDiscCfg.type === 'percent') {
+        pDiscAmount = (subtotal * (pDiscCfg.value || 0)) / 100
+      } else {
+        pDiscAmount = Math.min(subtotal, pDiscCfg.value || 0)
+      }
+      
+      const remaining = subtotal - pDiscAmount
+      totalAfterPersonalDiscounts += remaining
+      
+      return { p, subtotal, pDiscAmount, remaining, myItems }
+    }).filter(d => d.myItems.length > 0)
+
+    const globalDiscountValue = session.discount_value || 0
+    const globalShipFee = session.shipping_fee || 0
+    
+    // Final bill total after all adjustments
+    const finalBillTotal = totalAfterPersonalDiscounts - globalDiscountValue + globalShipFee
+    const billFactor = totalAfterPersonalDiscounts > 0 ? finalBillTotal / totalAfterPersonalDiscounts : 1
+    const globalDiscountFactor = calcDiscountFactor(session.discount_type, globalDiscountValue, totalAfterPersonalDiscounts)
+
+    return participantData.map(({ p, subtotal, pDiscAmount, remaining, myItems }) => {
+      const afterGlobalDiscount = remaining * globalDiscountFactor
+      const shipShareTotal = totalAfterPersonalDiscounts > 0 ? (remaining / totalAfterPersonalDiscounts) * globalShipFee : 0
+      const total = roundTo1000(remaining * billFactor)
 
       const itemBills: ItemBill[] = myItems.map(item => {
         const itemSubtotal = item.price * item.quantity
-        const itemAfterDisc = itemSubtotal * discountFactor
-        const itemShipShare = (itemSubtotal / itemsGrandTotal) * session.shipping_fee || 0
-        const itemTotal = roundTo500(itemSubtotal * billFactor)
+        const itemPDisc = subtotal > 0 ? (itemSubtotal / subtotal) * pDiscAmount : 0
+        const itemRemaining = itemSubtotal - itemPDisc
+        
+        const itemAfterGlobalDisc = itemRemaining * globalDiscountFactor
+        const itemShipShare = totalAfterPersonalDiscounts > 0 ? (itemRemaining / totalAfterPersonalDiscounts) * globalShipFee : 0
+        const itemTotal = roundTo1000(itemRemaining * billFactor)
+        
         return {
           item,
           subtotal: itemSubtotal,
-          discountAmount: Math.round(itemSubtotal - itemAfterDisc),
+          discountAmount: Math.round(itemSubtotal - itemAfterGlobalDisc),
           shippingShare: Math.round(itemShipShare),
           total: itemTotal,
         }
       })
 
       return {
-        participant,
+        participant: p,
         subtotal,
-        discountAmount: Math.round(subtotal - afterDiscountTotal),
+        discountAmount: Math.round(subtotal - afterGlobalDiscount),
         shippingShare: Math.round(shipShareTotal),
         total,
         items: itemBills,
       }
-    }).filter(entry => entry.items.length > 0)
+    })
   }
 
-  // BATCHED CALCULATION
-  const configs = (session.batch_configs as Record<string, any>) || {}
-  const participantsMap = new Map<string, BillEntry>()
+  // 2. SPLIT BATCH MODE
+  const participantsMap = new Map<string, BillEntry>();
 
-  // Initialize entries for everyone
-  participants.forEach(p => {
+  (participants || []).forEach(p => {
     participantsMap.set(p.id, {
       participant: p,
       subtotal: 0,
@@ -105,24 +113,25 @@ export function calculateBill(
     })
   })
 
-  // Get all unique batches
-  const batches = Array.from(new Set(allItems.map(i => i.batch_group || 'Đơn 1')))
-
-  batches.forEach(batchName => {
-    const batchItems = allItems.filter(i => (i.batch_group || 'Đơn 1') === batchName)
+  const batchIds = Array.from(new Set(allItems.map(i => i.order_batch_id).filter(Boolean)))
+  
+  batchIds.forEach(batchId => {
+    const batchItems = allItems.filter(i => i.order_batch_id === batchId)
     if (batchItems.length === 0) return
 
-    const batchSubtotal = calcSubtotal(batchItems)
-    const config = configs[batchName] || { type: 'amount', value: 0, ship: 0 }
+    const batchObj = (batches || []).find(b => b.id === batchId)
+    const batchName = batchObj?.name || 'Đơn 1'
     
-    // Calculate batch factors
+    const batchSubtotal = calcSubtotal(batchItems)
+    const config = sessionConfigs[batchName] || { type: 'amount', value: 0, ship: 0 }
+    
     const bItemsTotal = batchSubtotal
     const bDiscountValue = Number(config.value) || 0
     const bShipFee = Number(config.ship) || 0
     const bDiscountType = config.type || 'amount'
     
-    const finalBatchTotal = bItemsTotal - bDiscountValue + bShipFee
-    const bBillFactor = bItemsTotal > 0 ? finalBatchTotal / bItemsTotal : 1
+    const bFinalTotal = bItemsTotal - bDiscountValue + bShipFee
+    const bFactor = bItemsTotal > 0 ? bFinalTotal / bItemsTotal : 1
     const bDiscountFactor = calcDiscountFactor(bDiscountType, bDiscountValue, bItemsTotal)
 
     participants.forEach(p => {
@@ -131,49 +140,40 @@ export function calculateBill(
 
       const pSubtotal = calcSubtotal(pBatchItems)
       const pAfterDisc = pSubtotal * bDiscountFactor
-      const pShipShare = (pSubtotal / bItemsTotal) * bShipFee || 0
-      const pTotal = pSubtotal * bBillFactor // We round at the very end of all batches or per batch?
-      // Let's round per batch to keep it consistent with the "final total" logic if possible, 
-      // but actually rounding at the end is better for precision. 
-      // However, the user usually wants each batch to add up.
-      
+      const pShipShare = bItemsTotal > 0 ? (pSubtotal / bItemsTotal) * bShipFee : 0
+      const pTotal = roundTo1000(pSubtotal * bFactor)
+
       const entry = participantsMap.get(p.id)!
       entry.subtotal += pSubtotal
       entry.discountAmount += (pSubtotal - pAfterDisc)
       entry.shippingShare += pShipShare
-      entry.total += pTotal // Summing unrounded totals
+      entry.total += pTotal
 
       pBatchItems.forEach(item => {
         const itemSubtotal = item.price * item.quantity
         const itemAfterDisc = itemSubtotal * bDiscountFactor
-        const itemShipShare = (itemSubtotal / bItemsTotal) * bShipFee || 0
-        const itemTotal = itemSubtotal * bBillFactor
+        const itemShipShare = bItemsTotal > 0 ? (itemSubtotal / bItemsTotal) * bShipFee : 0
+        const itemTotal = roundTo1000(itemSubtotal * bFactor)
 
         entry.items.push({
           item,
           subtotal: itemSubtotal,
           discountAmount: Math.round(itemSubtotal - itemAfterDisc),
           shippingShare: Math.round(itemShipShare),
-          total: roundTo500(itemTotal), // Item totals are always rounded for display
+          total: itemTotal
         })
       })
     })
   })
 
-  // Final rounding and filtering
   return Array.from(participantsMap.values())
     .map(entry => {
-      entry.discountAmount = Math.round(entry.discountAmount)
-      entry.shippingShare = Math.round(entry.shippingShare)
-      entry.total = roundTo500(entry.total)
+      entry.total = roundTo1000(entry.total)
       return entry
     })
     .filter(entry => entry.items.length > 0)
 }
 
-/**
- * Format a number as Vietnamese currency string (e.g. 35,000đ)
- */
 export function formatVND(amount: number): string {
   return new Intl.NumberFormat('vi-VN').format(amount) + 'đ'
 }

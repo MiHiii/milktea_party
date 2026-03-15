@@ -8,21 +8,35 @@ export type Json =
 
 // ─── Domain Types ──────────────────────────────────────────────────────────
 
+export interface OrderBatch {
+  id: string
+  session_id: string
+  name: string
+  bank_name: string | null
+  bank_account: string | null
+  qr_payload: string | null
+  status: 'open' | 'locked' | 'paid'
+  is_default: boolean
+  sort_order: number
+  created_at: string
+}
+
 export interface Session {
   id: string
   slug: string
   title: string
   host_device_id: string
   shop_link: string | null
-  bank_name: string | null
-  bank_account: string | null
-  qr_payload: string | null
+  host_default_bank_name: string | null
+  host_default_bank_account: string | null
+  host_default_qr_payload: string | null
   status: 'open' | 'locked' | 'paid'
   discount_type: 'amount' | 'percent'
   discount_value: number
   shipping_fee: number
   batch_configs: Json
   is_split_batch: boolean
+  use_default_qr_for_all: boolean
   has_password?: boolean
   created_at: string
 }
@@ -40,13 +54,13 @@ export interface OrderItem {
   id: string
   participant_id: string
   session_id: string
+  order_batch_id: string | null
   item_name: string
   price: number
   quantity: number
   note: string | null
   ice: string | null
   sugar: string | null
-  batch_group: string
   pay_separate: boolean
   created_at: string
 }
@@ -74,34 +88,31 @@ export interface BillEntry {
 
 // ─── Supabase Database type (used for typed client) ───────────────────────
 
-type SessionInsert = Omit<Session, 'id' | 'created_at' | 'qr_payload' | 'bank_name' | 'bank_account' | 'shop_link'> & Partial<Pick<Session, 'qr_payload' | 'bank_name' | 'bank_account' | 'shop_link'>>
-type SessionUpdate = Partial<SessionInsert>
-
-type ParticipantInsert = Omit<Participant, 'id' | 'last_active'> & Partial<Pick<Participant, 'last_active'>>
-type ParticipantUpdate = Partial<ParticipantInsert>
-
-type OrderItemInsert = Omit<OrderItem, 'id' | 'created_at' | 'note'> & Partial<Pick<OrderItem, 'note'>>
-type OrderItemUpdate = Partial<OrderItemInsert>
-
 export interface Database {
   public: {
     Tables: {
       sessions: {
         Row: Session
-        Insert: SessionInsert
-        Update: SessionUpdate
+        Insert: any
+        Update: any
+        Relationships: []
+      }
+      order_batches: {
+        Row: OrderBatch
+        Insert: any
+        Update: any
         Relationships: []
       }
       participants: {
         Row: Participant
-        Insert: ParticipantInsert
-        Update: ParticipantUpdate
+        Insert: any
+        Update: any
         Relationships: []
       }
       order_items: {
         Row: OrderItem
-        Insert: OrderItemInsert
-        Update: OrderItemUpdate
+        Insert: any
+        Update: any
         Relationships: []
       }
     }

@@ -27,7 +27,7 @@ export default function HistoryPage() {
       // Find all sessions where user was host
       const { data: hostSessions } = await supabase
         .from('sessions')
-        .select('*')
+        .select('id, slug, title, status, host_device_id, created_at')
         .eq('host_device_id', deviceId)
         .order('created_at', { ascending: false })
         .limit(50)
@@ -40,11 +40,11 @@ export default function HistoryPage() {
       if (sessionIds.length > 0) {
         const { data } = await supabase
           .from('sessions')
-          .select('*')
+          .select('id, slug, title, status, host_device_id, created_at')
           .in('id', sessionIds)
           .order('created_at', { ascending: false })
           .limit(50)
-        participantSessions = data || []
+        participantSessions = (data as any) || []
       }
 
       // Merge and deduplicate

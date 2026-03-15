@@ -11,7 +11,7 @@ const AddItemSchema = z.object({
   note: z.string().max(200).optional(),
   ice: z.string().optional(),
   sugar: z.string().optional(),
-  batch_group: z.string().optional(),
+  order_batch_id: z.string().uuid().nullable().optional(),
   pay_separate: z.boolean().optional(),
 })
 
@@ -23,10 +23,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
   }
 
-  const { participantId, sessionId, itemName, price, quantity, note, ice, sugar } = parsed.data
+  const { participantId, sessionId, itemName, price, quantity, note, ice, sugar, order_batch_id } = parsed.data
   const supabase = await createClient()
 
-  // Check session is still open
   const { data: session } = await (supabase
     .from('sessions')
     .select('status')
@@ -47,7 +46,7 @@ export async function POST(request: Request) {
       note: note || null,
       ice: ice || null,
       sugar: sugar || null,
-      batch_group: parsed.data.batch_group || 'Đơn 1',
+      order_batch_id: order_batch_id || null,
       pay_separate: !!parsed.data.pay_separate,
     })
     .select()

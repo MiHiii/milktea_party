@@ -9,7 +9,7 @@ const UpdateItemSchema = z.object({
   note: z.string().max(200).nullable().optional(),
   ice: z.string().nullable().optional(),
   sugar: z.string().nullable().optional(),
-  batch_group: z.string().optional(),
+  order_batch_id: z.string().uuid().nullable().optional(),
   pay_separate: z.boolean().optional(),
 })
 
@@ -54,7 +54,7 @@ export async function PATCH(
   if (parsed.data.note !== undefined) updates.note = parsed.data.note
   if (parsed.data.ice !== undefined) updates.ice = parsed.data.ice
   if (parsed.data.sugar !== undefined) updates.sugar = parsed.data.sugar
-  if (parsed.data.batch_group !== undefined) updates.batch_group = parsed.data.batch_group
+  if (parsed.data.order_batch_id !== undefined) updates.order_batch_id = parsed.data.order_batch_id
   if (parsed.data.pay_separate !== undefined) updates.pay_separate = parsed.data.pay_separate
 
   const { data: updated, error } = await (supabase.from('order_items') as any)
@@ -77,7 +77,6 @@ export async function DELETE(
   const { id } = await params
   const supabase = await createClient()
 
-  // Fetch item to verify session is open
   const { data: item } = await (supabase
     .from('order_items')
     .select('*')

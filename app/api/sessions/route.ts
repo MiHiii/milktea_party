@@ -8,7 +8,7 @@ const CreateSessionSchema = z.object({
   shopLink: z.string().url().optional().or(z.literal('')),
   bankName: z.string().optional().or(z.literal('')),
   bankAccount: z.string().optional().or(z.literal('')),
-  shippingFee: z.number().min(0).default(0),
+  shippingFee: z.coerce.number().min(0).default(0),
   hostDeviceId: z.string().min(1),
   hostName: z.string().min(1).max(50).default('Host'),
   password: z.string().optional().or(z.literal('')),
@@ -43,8 +43,8 @@ export async function POST(request: Request) {
         slug,
         title,
         shop_link: shopLink || null,
-        bank_name: bankName || null,
-        bank_account: bankAccount || null,
+        host_default_bank_name: bankName || null,
+        host_default_bank_account: bankAccount || null,
         shipping_fee: shippingFee,
         host_device_id: hostDeviceId,
         status: 'open',
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
         password: password || null,
         is_split_batch: false,
       })
-      .select()
+      .select('id, slug, title, host_device_id, status, host_default_bank_name, host_default_bank_account, host_default_qr_payload, discount_type, discount_value, shipping_fee, is_split_batch, use_default_qr_for_all, created_at')
       .single()
 
     if (error) {
