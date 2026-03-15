@@ -23,6 +23,7 @@ interface ParticipantItemProps {
   onCancelEdit: () => void
   onDeleteItem: (itemId: string) => void
   onCopyItem: (item: OrderItemType) => void
+  onTogglePaid?: (participantId: string, isPaid: boolean) => void
   isLoading: boolean
   PERCENT_OPTIONS: string[]
 }
@@ -44,6 +45,7 @@ export function ParticipantItem({
   onCancelEdit,
   onDeleteItem,
   onCopyItem,
+  onTogglePaid,
   isLoading,
   PERCENT_OPTIONS
 }: ParticipantItemProps) {
@@ -65,7 +67,31 @@ export function ParticipantItem({
           <p className="text-xs text-white/40">{items.length} món · {formatVND(calcSubtotal(items))}</p>
         </div>
         <div className="flex items-center gap-2">
-          {participant.is_paid && <Badge variant="paid" className="text-[10px] px-1.5">✓ Đã trả</Badge>}
+          {participant.is_paid ? (
+            <Badge 
+              variant="paid" 
+              className={`text-[10px] px-1.5 ${iAmHost && session.status !== 'open' ? 'cursor-pointer hover:bg-sky-500/30' : ''}`}
+              onClick={(e) => {
+                if (iAmHost && session.status !== 'open' && onTogglePaid) {
+                  e.stopPropagation()
+                  onTogglePaid(participant.id, false)
+                }
+              }}
+            >✓ Đã trả</Badge>
+          ) : (
+            session.status !== 'open' && (
+              <Badge 
+                variant="unpaid" 
+                className={`text-[10px] px-1.5 ${iAmHost ? 'cursor-pointer hover:bg-rose-500/30' : ''}`}
+                onClick={(e) => {
+                  if (iAmHost && onTogglePaid) {
+                    e.stopPropagation()
+                    onTogglePaid(participant.id, true)
+                  }
+                }}
+              >✕ Chưa trả</Badge>
+            )
+          )}
           <ChevronDown className={`w-4 h-4 text-white/30 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
         </div>
       </div>

@@ -137,3 +137,29 @@ export function buildQrUrl(
   const nameEncoded = encodeURIComponent(accountName)
   return `${VIETQR_BASE}/${bankCode}-${accountNumber}-compact2.png?amount=${amount}&addInfo=${encoded}&accountName=${nameEncoded}`
 }
+
+export async function lookupAccountName(bankCode: string, accountNumber: string): Promise<string | null> {
+  try {
+    const bin = BANK_OPTIONS.find(b => b.code === bankCode)?.bin
+    if (!bin) return null
+    
+    const res = await fetch('https://api.vietqr.io/v2/lookup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        bin,
+        accountNumber,
+      }),
+    })
+    const data = await res.json()
+    if (data.code === '00') {
+      return data.data.accountName
+    }
+    return null
+  } catch (e) {
+    console.error('Lookup Error:', e)
+    return null
+  }
+}

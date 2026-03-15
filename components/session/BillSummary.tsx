@@ -39,7 +39,11 @@ export function BillSummary({ entries, session, batches = [] }: BillSummaryProps
                       <div className="flex items-center gap-2">
                         {entry.participant.is_host && <Crown className="w-3.5 h-3.5 text-amber-400" />}
                         <span className="font-bold text-white text-[13px]">{entry.participant.name}</span>
-                        {entry.participant.is_paid && <Badge variant="paid" className="text-[9px] px-1.5 py-0">Đã trả</Badge>}
+                        {entry.participant.is_paid ? (
+                          <Badge variant="paid" className="text-[9px] px-1.5 py-0">Đã trả</Badge>
+                        ) : (
+                          session.status !== 'open' && <Badge variant="unpaid" className="text-[9px] px-1.5 py-0">Chưa trả</Badge>
+                        )}
                       </div>
                       <span className="font-black text-sky-400 tabular-nums text-sm">{formatVND(entry.total)}</span>
                     </div>
@@ -149,7 +153,11 @@ export function BillSummary({ entries, session, batches = [] }: BillSummaryProps
                           <div className="flex items-center gap-2">
                             {entry.participant.is_host && <Crown className="w-3.5 h-3.5 text-amber-400" />}
                             <span className="font-bold text-white text-[13px] leading-tight">{entry.participant.name}</span>
-                            {entry.participant.is_paid && <Badge variant="paid" className="text-[9px] px-1.5 py-0">Đã trả</Badge>}
+                            {entry.participant.is_paid ? (
+                              <Badge variant="paid" className="text-[9px] px-1.5 py-0">Đã trả</Badge>
+                            ) : (
+                              session.status !== 'open' && <Badge variant="unpaid" className="text-[9px] px-1.5 py-0">Chưa trả</Badge>
+                            )}
                           </div>
                           <span className="font-black text-sky-400 tabular-nums text-sm">{formatVND(pBT)}</span>
                         </div>

@@ -4,7 +4,7 @@ import * as React from 'react'
 import { Session, OrderBatch, OrderItem } from '@/lib/types'
 import { formatVND } from '@/lib/calc'
 import { 
-  Settings, Loader2, Plus, X as XIcon, CheckCircle, Calculator, Camera, Save
+  Settings, Loader2, Plus, X as XIcon, CheckCircle, Calculator, Camera, Save, Search
 } from 'lucide-react'
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle 
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
+import { lookupAccountName } from '@/lib/vietqr'
 
 // Import Sub-components
 import { SessionConfig } from './host/SessionConfig'
@@ -97,7 +98,23 @@ export function HostSettings({
   BANK_OPTIONS
 }: HostSettingsProps) {
   const [expandedBatchId, setExpandedBatchId] = React.useState<string | null>(null)
+  const [hostAccountName, setHostAccountName] = React.useState('')
+  const [isLookingUp, setIsLookingUp] = React.useState(false)
   const hasSubOrders = session.is_split_batch
+
+  const onLookupGlobal = async () => {
+    if (!bankNameInput || !bankAccountInput) return
+    setIsLookingUp(true)
+    try {
+      const name = await lookupAccountName(bankNameInput, bankAccountInput)
+      if (name) setHostAccountName(name)
+      else setHostAccountName('Không tìm thấy tên')
+    } catch (e) {
+      setHostAccountName('Lỗi tra cứu')
+    } finally {
+      setIsLookingUp(false)
+    }
+  }
   
   const originalTotal = orderItems.reduce((s, i) => s + i.price * i.quantity, 0)
   const discountVal = session.discount_type === 'percent' 
@@ -251,8 +268,18 @@ export function HostSettings({
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-[9px] font-black text-white/20 uppercase tracking-widest ml-1">Số tài khoản</label>
-                        <Input placeholder="Nhập STK..." className="h-12 bg-black/40 border-white/10 rounded-2xl text-base font-bold" value={bankAccountInput} onChange={(e) => setBankAccountInput(e.target.value)} />
+                        <div className="relative">
+                          <Input placeholder="Nhập STK..." className="h-12 bg-black/40 border-white/10 rounded-2xl text-base font-bold pr-12" value={bankAccountInput} onChange={(e) => setBankAccountInput(e.target.value)} />
+                          <button onClick={onLookupGlobal} disabled={isLookingUp || !bankAccountInput} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-sky-400/60 hover:text-sky-400 disabled:opacity-30 transition-colors">
+                            {isLookingUp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                          </button>
+                        </div>
                       </div>
+                      {hostAccountName && (
+                        <div className="px-3 py-2 bg-sky-500/5 border border-sky-500/10 rounded-xl animate-in fade-in slide-in-from-top-1 duration-300">
+                          <p className="text-[10px] text-sky-400 font-bold uppercase truncate">{hostAccountName}</p>
+                        </div>
+                      )}
                     </div>
                     <div className="w-full sm:w-40 flex flex-col gap-1.5">
                       <label className="text-[9px] font-black text-white/20 uppercase tracking-widest ml-1 text-center">Mã QR</label>

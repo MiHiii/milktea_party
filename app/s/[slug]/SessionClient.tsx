@@ -105,14 +105,41 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null)
   const [isProcessingQR, setIsProcessingQR] = useState(false)
   const [qrPreviewUrl, setQrPreviewUrl] = useState<string | null>(null)
+  const [showChangeToast, setShowChangeToast] = useState(false)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const nameInputRef = useRef('')
 
-  const showWarning = (title: string, description: string) => {
+  const showWarning = (title: string, description: ReactNode) => {
     setConfirmConfig({ isOpen: true, title, description, variant: 'primary', onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false })) })
   }
+
+  const resetFinalPrice = useCallback(async () => {
+    if (session.status !== 'open') return
+    
+    try {
+      if (session.is_split_batch) {
+        // Reset all batch adjustments in batch_configs
+        const nC = { ...((session.batch_configs as Record<string, any>) || {}) }
+        orderBatches.forEach(b => { if (nC[b.name]) nC[b.name] = { ...nC[b.name], value: 0, ship: 0 } })
+        
+        await fetch(`/api/sessions/${session.slug}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hostDeviceId: getOrCreateDeviceId(), batchConfigs: nC })
+        })
+      } else {
+        await fetch(`/api/sessions/${session.slug}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hostDeviceId: getOrCreateDeviceId(), discountType: 'amount', discountValue: 0, shippingFee: 0 })
+        })
+      }
+      setShowChangeToast(true)
+      setTimeout(() => setShowChangeToast(false), 5000)
+    } catch (e) { }
+  }, [session.id, session.status, session.is_split_batch, session.batch_configs, orderBatches, session.slug])
 
   useEffect(() => { return () => { if (qrPreviewUrl) URL.revokeObjectURL(qrPreviewUrl) } }, [qrPreviewUrl])
 
@@ -180,21 +207,124 @@ export default function SessionClient({ initialSession, initialParticipants, ini
 
   useEffect(() => { if (orderBatches.length > 0 && !addItemForm.getValues('order_batch_id')) addItemForm.setValue('order_batch_id', orderBatches[0].id) }, [orderBatches, addItemForm])
 
-  const deleteItem = useCallback(async (itemId: string) => { setOrderItems(prev => prev.filter(i => i.id !== itemId)); try { await fetch(`/api/order-items/${itemId}`, { method: 'DELETE' }) } catch { } }, [])
+  const deleteItem = useCallback(async (itemId: string) => { 
+    setOrderItems(prev => prev.filter(i => i.id !== itemId)); 
+    try { 
+      await fetch(`/api/order-items/${itemId}`, { method: 'DELETE' });
+      resetFinalPrice();
+    } catch { } 
+  }, [resetFinalPrice])
+  
   const startEdit = useCallback((item: OrderItemType) => { setEditingItemId(item.id); setEditDraft({ itemName: item.item_name, price: String(item.price), quantity: String(item.quantity), note: item.note || '', ice: item.ice || '50%', sugar: item.sugar || '50%', order_batch_id: item.order_batch_id, pay_separate: !!item.pay_separate }) }, [])
-  const saveEdit = useCallback(async (itemId: string) => { if (Number(editDraft.price) % 100 !== 0) { showWarning('Số tiền không hợp lệ', 'Vui lòng nhập số tiền chia hết cho 100'); return } setIsLoading(true); try { await fetch(`/api/order-items/${itemId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ itemName: editDraft.itemName, price: Number(editDraft.price), quantity: Number(editDraft.quantity), note: editDraft.note || null, ice: editDraft.ice || null, sugar: editDraft.sugar || null, order_batch_id: session.is_split_batch ? editDraft.order_batch_id : (orderBatches?.[0]?.id || null), pay_separate: !!editDraft.pay_separate }) }); setEditingItemId(null) } finally { setIsLoading(false) } }, [editDraft, session.is_split_batch, orderBatches])
-  const addItem = useCallback(async (data: any) => { if (Number(data.price) % 100 !== 0) { showWarning('Số tiền không hợp lệ', 'Vui lòng nhập số tiền chia hết cho 100'); return } if (!myParticipantId) return; setIsLoading(true); try { const res = await fetch('/api/order-items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: session.id, participantId: myParticipantId, itemName: data.itemName, price: Number(data.price), quantity: data.quantity, note: data.note || null, ice: data.ice || null, sugar: data.sugar || null, order_batch_id: session.is_split_batch ? data.order_batch_id : (orderBatches?.[0]?.id || null), pay_separate: !!data.pay_separate }) }); if (res.ok) { addItemForm.reset({ ...addItemForm.getValues(), itemName: '', price: '' as any, note: '' }); setJustAdded(true); setTimeout(() => setJustAdded(false), 2000) } } finally { setIsLoading(false) } }, [session.id, myParticipantId, session.is_split_batch, orderBatches, addItemForm])
+  
+  const saveEdit = useCallback(async (itemId: string) => { 
+    if (Number(editDraft.price) % 100 !== 0) { showWarning('Số tiền không hợp lệ', 'Vui lòng nhập số tiền chia hết cho 100'); return } 
+    setIsLoading(true); 
+    try { 
+      await fetch(`/api/order-items/${itemId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ itemName: editDraft.itemName, price: Number(editDraft.price), quantity: Number(editDraft.quantity), note: editDraft.note || null, ice: editDraft.ice || null, sugar: editDraft.sugar || null, order_batch_id: session.is_split_batch ? editDraft.order_batch_id : (orderBatches?.[0]?.id || null), pay_separate: !!editDraft.pay_separate }) }); 
+      setEditingItemId(null);
+      resetFinalPrice();
+    } finally { setIsLoading(false) } 
+  }, [editDraft, session.is_split_batch, orderBatches, resetFinalPrice])
+  
+  const addItem = useCallback(async (data: any) => { 
+    if (Number(data.price) % 100 !== 0) { showWarning('Số tiền không hợp lệ', 'Vui lòng nhập số tiền chia hết cho 100'); return } 
+    if (!myParticipantId) return; 
+    setIsLoading(true); 
+    try { 
+      const res = await fetch('/api/order-items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: session.id, participantId: myParticipantId, itemName: data.itemName, price: Number(data.price), quantity: data.quantity, note: data.note || null, ice: data.ice || null, sugar: data.sugar || null, order_batch_id: session.is_split_batch ? data.order_batch_id : (orderBatches?.[0]?.id || null), pay_separate: !!data.pay_separate }) }); 
+      if (res.ok) { 
+        addItemForm.reset({ ...addItemForm.getValues(), itemName: '', price: '' as any, note: '' }); 
+        setJustAdded(true); 
+        setTimeout(() => setJustAdded(false), 2000);
+        resetFinalPrice();
+      } 
+    } finally { setIsLoading(false) } 
+  }, [session.id, myParticipantId, session.is_split_batch, orderBatches, addItemForm, resetFinalPrice])
 
   const copyToClipboard = useCallback((text: string) => { const el = document.createElement("textarea"); el.value = text; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el) }, [])
   const shareLink = useCallback(() => { const url = window.location.href; if (navigator.share) navigator.share({ title: session.title, url }); else { copyToClipboard(url); setCopied(true); setTimeout(() => setCopied(false), 2000) } }, [session.title, copyToClipboard])
   const copySessionId = useCallback(() => { copyToClipboard(session.slug); setCopiedId(true); setTimeout(() => setCopiedId(false), 2000) }, [session.slug, copyToClipboard])
 
   const lockOrder = useCallback(async () => { 
-    if (!hasBankInfo) { alert('Vui lòng bổ sung thông tin bank.'); setHostControlsOpen(true); return }
-    setConfirmConfig({ isOpen: true, title: 'Chốt đơn?', description: 'Mọi người sẽ không thể sửa món nữa.', variant: 'primary', onConfirm: async () => { setIsLoading(true); try { await fetch(`/api/sessions/${session.slug}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hostDeviceId: getOrCreateDeviceId(), status: 'locked' }) }); setConfirmConfig(prev => ({ ...prev, isOpen: false })) } finally { setIsLoading(false) } } })
-  }, [session.slug, hasBankInfo])
+    // 1. Bank Information Validation
+    if (!session.is_split_batch) {
+      if (!session.host_default_bank_account || !session.host_default_bank_name) {
+        showWarning('Thiếu thông tin Bank', 'Vui lòng bổ sung STK và Ngân hàng của Host.')
+        setHostControlsOpen(true)
+        return
+      }
+      if (!session.host_default_qr_payload) {
+        showWarning('Lỗi QR Code', 'Mã QR chưa được tạo thành công. Vui lòng kiểm tra lại STK/Ngân hàng.')
+        setHostControlsOpen(true)
+        return
+      }
+    } else {
+      const batchesWithItems = orderBatches.filter(b => orderItems.some(i => i.order_batch_id === b.id))
+      const paymentSources = (session.batch_configs as any)?.paymentSources || {}
+      
+      for (const batch of batchesWithItems) {
+        const sourceId = paymentSources[batch.id] || batch.id
+        const sourceBatch = orderBatches.find(b => b.id === sourceId)
+        
+        const bAcc = sourceBatch ? sourceBatch.bank_account : session.host_default_bank_account
+        const bName = sourceBatch ? sourceBatch.bank_name : session.host_default_bank_name
+        const bQr = sourceBatch ? sourceBatch.qr_payload : session.host_default_qr_payload
+        
+        if (!bAcc || !bName) {
+          showWarning('Thiếu thông tin Bank', `Đợt "${batch.name}" chưa có thông tin thanh toán.`)
+          setHostControlsOpen(true)
+          return
+        }
+        if (!bQr) {
+          showWarning('Lỗi QR Code', `Mã QR của đợt "${batch.name}" chưa được tạo thành công.`)
+          setHostControlsOpen(true)
+          return
+        }
+      }
+    }
+
+    // 2. Price Discrepancy Check (Optional but recommended)
+    const originalTotal = orderItems.reduce((s, i) => s + i.price * i.quantity, 0)
+    const discountVal = session.discount_type === 'percent' ? (originalTotal * (session.discount_value || 0)) / 100 : (session.discount_value || 0)
+    const estimatedPayable = Math.max(0, originalTotal - discountVal + session.shipping_fee)
+    
+    // Check if host has entered a different final_price
+    // (This is a heuristic, in a real app we might store the 'last_confirmed_total')
+
+    setConfirmConfig({ 
+      isOpen: true, 
+      title: 'Chốt đơn?', 
+      description: (
+        <div className="space-y-2">
+          <p>Mọi người sẽ không thể sửa món nữa.</p>
+          <div className="bg-sky-500/10 p-3 rounded-xl border border-sky-500/20 mt-2">
+            <p className="text-[10px] uppercase font-black text-sky-400/60 mb-1">Tổng tiền thanh toán dự kiến</p>
+            <p className="text-xl font-black text-sky-400">{formatVND(estimatedPayable)}</p>
+          </div>
+        </div>
+      ), 
+      variant: 'primary', 
+      onConfirm: async () => { 
+        setIsLoading(true); 
+        try { 
+          await fetch(`/api/sessions/${session.slug}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hostDeviceId: getOrCreateDeviceId(), status: 'locked' }) }); 
+          setConfirmConfig(prev => ({ ...prev, isOpen: false })) 
+        } finally { setIsLoading(false) } 
+      } 
+    })
+  }, [session, orderBatches, orderItems])
 
   const markSessionPaid = useCallback(async () => { setConfirmConfig({ isOpen: true, title: 'Hoàn thành đơn?', description: 'Đánh dấu tất cả là đã thanh toán.', variant: 'primary', onConfirm: async () => { setIsLoading(true); try { await Promise.all(participants.filter(p => !p.is_paid).map(p => fetch('/api/participants', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ participantId: p.id, isPaid: true }) }))); await fetch(`/api/sessions/${session.slug}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hostDeviceId: getOrCreateDeviceId(), status: 'paid' }) }); setConfirmConfig(prev => ({ ...prev, isOpen: false })) } finally { setIsLoading(false) } } }) }, [session.slug, participants])
+  const toggleParticipantPaid = useCallback(async (participantId: string, isPaid: boolean) => {
+    try {
+      await fetch('/api/participants', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantId, isPaid })
+      })
+    } catch (e) { }
+  }, [])
   const reopenOrder = useCallback(async () => { setConfirmConfig({ isOpen: true, title: 'Mở lại đơn?', description: 'Cho phép mọi người sửa món.', variant: 'primary', onConfirm: async () => { setIsLoading(true); try { await fetch(`/api/sessions/${session.slug}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hostDeviceId: getOrCreateDeviceId(), status: 'open' }) }); setConfirmConfig(prev => ({ ...prev, isOpen: false })) } finally { setIsLoading(false) } } }) }, [session.slug])
 
   const claimName = useCallback(async (name: string) => { if (!name.trim()) return; setIsLoading(true); try { const existing = participants.find(p => p.name.toLowerCase() === name.trim().toLowerCase()); if (existing) { setClaimCandidate(existing); setClaimModalOpen(true); setNameModalOpen(false); return } const res = await fetch('/api/participants', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: session.id, name: name.trim() }) }); const data = await res.json(); if (data.participant?.id) { setParticipantId(session.id, data.participant.id); setMyParticipantId(data.participant.id); setExpandedParticipant(data.participant.id); setNameModalOpen(false) } } finally { setIsLoading(false) } }, [session.id, participants])
@@ -367,7 +497,7 @@ export default function SessionClient({ initialSession, initialParticipants, ini
       <div className="max-w-2xl mx-auto px-4 pt-3 flex flex-col gap-3">
         {session.status !== 'open' && myBill && !myBill.participant.is_paid && myBill.total > 0 && ( <div className="bg-gradient-to-r from-sky-600/30 to-indigo-600/30 border border-sky-500/30 rounded-[2.5rem] p-6 text-center shadow-2xl"> <p className="text-sm text-white/70 mb-1">Bạn cần thanh toán</p> <p className="text-4xl font-black text-white tabular-nums">{formatVND(myBill.total)}</p> </div> )}
         {canEdit && ( <Card className="rounded-[2.5rem] border-white/5 bg-white/[0.02]"> <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><ShoppingBag className="w-4 h-4 text-sky-400" />Gọi của bạn</CardTitle></CardHeader> <CardContent> <OrderForm session={session} orderBatches={orderBatches} form={addItemForm} onSubmit={addItem} onClear={() => addItemForm.reset()} isLoading={isLoading} justAdded={justAdded} PERCENT_OPTIONS={PERCENT_OPTIONS} /> </CardContent> </Card> )}
-        <Card className="rounded-[2.5rem] border-white/5 bg-white/[0.02]"> <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4 text-sky-400" />Đơn hàng ({participants.length} người)</CardTitle></CardHeader> <CardContent className="p-0"> <div className="divide-y divide-white/5"> {participants.map(p => (<ParticipantItem key={p.id} participant={p} items={orderItems.filter(i => i.participant_id === p.id)} session={session} orderBatches={orderBatches} myParticipantId={myParticipantId} iAmHost={isHostUser} isExpanded={expandedParticipant === p.id} onToggleExpand={() => setExpandedParticipant(expandedParticipant === p.id ? null : p.id)} editingItemId={editingItemId} editDraft={editDraft} setEditDraft={setEditDraft} onStartEdit={startEdit} onSaveEdit={saveEdit} onCancelEdit={() => setEditingItemId(null)} onDeleteItem={deleteItem} onCopyItem={(i) => { addItemForm.reset({ itemName: i.item_name, price: i.price, quantity: i.quantity, note: i.note || '', ice: i.ice || '50%', sugar: i.sugar || '50%', order_batch_id: i.order_batch_id, pay_separate: !!i.pay_separate }); window.scrollTo({ top: 0, behavior: 'smooth' }) }} isLoading={isLoading} PERCENT_OPTIONS={PERCENT_OPTIONS} />))} </div> </CardContent> </Card>
+        <Card className="rounded-[2.5rem] border-white/5 bg-white/[0.02]"> <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4 text-sky-400" />Đơn hàng ({participants.length} người)</CardTitle></CardHeader> <CardContent className="p-0"> <div className="divide-y divide-white/5"> {participants.map(p => (<ParticipantItem key={p.id} participant={p} items={orderItems.filter(i => i.participant_id === p.id)} session={session} orderBatches={orderBatches} myParticipantId={myParticipantId} iAmHost={isHostUser} isExpanded={expandedParticipant === p.id} onToggleExpand={() => setExpandedParticipant(expandedParticipant === p.id ? null : p.id)} editingItemId={editingItemId} editDraft={editDraft} setEditDraft={setEditDraft} onStartEdit={startEdit} onSaveEdit={saveEdit} onCancelEdit={() => setEditingItemId(null)} onDeleteItem={deleteItem} onCopyItem={(i) => { addItemForm.reset({ itemName: i.item_name, price: i.price, quantity: i.quantity, note: i.note || '', ice: i.ice || '50%', sugar: i.sugar || '50%', order_batch_id: i.order_batch_id, pay_separate: !!i.pay_separate }); window.scrollTo({ top: 0, behavior: 'smooth' }) }} onTogglePaid={toggleParticipantPaid} isLoading={isLoading} PERCENT_OPTIONS={PERCENT_OPTIONS} />))} </div> </CardContent> </Card>
         {billEntries.length > 0 && orderItems.length > 0 && ( <div className="flex flex-col gap-3"> <button onClick={() => setShowBillSummary(!showBillSummary)} className="w-full h-14 rounded-[1.5rem] bg-sky-500/10 border border-sky-500/20 text-sky-400 font-black uppercase text-xs flex items-center justify-center gap-2 transition-all"><Receipt className="w-4 h-4" />{showBillSummary ? 'Ẩn bảng tạm tính' : 'Xem bảng tạm tính'}<ChevronDown className={`w-4 h-4 transition-all ${showBillSummary ? 'rotate-180' : ''}`} /></button> {showBillSummary && <BillSummary entries={billEntries} session={session} batches={orderBatches} />} </div> )}
         <QrSection session={session} orderBatches={orderBatches} myParticipantId={myParticipantId} iAmHost={isHostUser} showQrs={showQrs} myBill={myBill} billEntries={billEntries} copyToClipboard={copyToClipboard} />
         {isHostUser && ( <div className="flex flex-col gap-3 mt-4"> {session.status === 'open' ? (<Button variant="warning" size="lg" onClick={lockOrder} disabled={isLoading} className="w-full text-lg font-bold py-7 rounded-[2rem] uppercase tracking-widest"><Lock className="w-5 h-5 mr-2" /> Chốt đơn</Button>) : session.status === 'locked' ? (<div className="flex gap-3"><Button variant="outline" size="lg" onClick={() => setShowQrs(!showQrs)} className="flex-1 py-7 rounded-[2rem] font-bold uppercase">QR</Button><Button variant="success" size="lg" onClick={markSessionPaid} disabled={isLoading} className="flex-1 py-7 rounded-[2rem] font-bold uppercase">Hoàn thành</Button></div>) : (<div className="text-center py-6 bg-emerald-500/10 rounded-[2rem] font-black text-emerald-400 uppercase">✅ Hoàn thành!</div>)} {session.status !== 'open' && (<button onClick={reopenOrder} className="mt-2 text-[10px] text-white/20 hover:text-sky-400 uppercase font-black text-center w-full">Mở lại đơn?</button>)} </div> )}
@@ -403,6 +533,15 @@ export default function SessionClient({ initialSession, initialParticipants, ini
       <ActionSheet isOpen={showActionSheet} onClose={() => setShowActionSheet(false)} title={selectedBatchId ? "Quét QR đơn" : "Quét QR Host"} options={[{ label: "Chụp ảnh", icon: <Camera className="w-5 h-5 text-sky-400" />, onClick: () => cameraInputRef.current?.click() }, { label: "Thư viện", icon: <ImageIcon className="w-5 h-5 text-emerald-400" />, onClick: () => fileInputRef.current?.click() }]} />
       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && handleScanQR(e.target.files[0])} />
       <input type="file" ref={cameraInputRef} className="hidden" accept="image/*" capture="environment" onChange={e => e.target.files?.[0] && handleScanQR(e.target.files[0])} />
+
+      {showChangeToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-amber-500 text-slate-950 px-6 py-3 rounded-2xl font-bold shadow-2xl flex items-center gap-2 border border-amber-400">
+            <span className="text-lg">⚠️</span>
+            <span className="text-xs uppercase tracking-tight text-center leading-tight">Đơn có thay đổi, vui lòng kiểm tra & nhập lại<br/>Giá thực tế trước khi chốt đơn!</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
