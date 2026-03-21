@@ -270,16 +270,8 @@ export function HostSettings({
                         <label className="text-[9px] font-black text-white/20 uppercase tracking-widest ml-1">Số tài khoản</label>
                         <div className="relative">
                           <Input placeholder="Nhập STK..." className="h-12 bg-black/40 border-white/10 rounded-2xl text-base font-bold pr-12" value={bankAccountInput} onChange={(e) => setBankAccountInput(e.target.value)} />
-                          <button onClick={onLookupGlobal} disabled={isLookingUp || !bankAccountInput} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-sky-400/60 hover:text-sky-400 disabled:opacity-30 transition-colors">
-                            {isLookingUp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                          </button>
                         </div>
                       </div>
-                      {hostAccountName && (
-                        <div className="px-3 py-2 bg-sky-500/5 border border-sky-500/10 rounded-xl animate-in fade-in slide-in-from-top-1 duration-300">
-                          <p className="text-[10px] text-sky-400 font-bold uppercase truncate">{hostAccountName}</p>
-                        </div>
-                      )}
                     </div>
                     <div className="w-full sm:w-40 flex flex-col gap-1.5">
                       <label className="text-[9px] font-black text-white/20 uppercase tracking-widest ml-1 text-center">Mã QR</label>

@@ -89,32 +89,25 @@ export function parseVietQR(data: string): { bankCode: string | null; accountNum
           
           const bank = BANK_OPTIONS.find(b => b.bin === bin)
           return {
-            bankCode: bank ? bank.code : null,
+            bankCode: bank ? bank.code : bin,
             accountNumber: acc || null
           }
         }
       }
     }
 
-    // 3. Xử lý chuỗi thô hoặc định dạng lạ (như trường hợp TCB 028881119990208)
-    // Tìm chuỗi số liên tục từ 6-15 ký tự (số tài khoản)
+    // 3. Xử lý chuỗi thô hoặc định dạng lạ
     const accountMatch = data.match(/([0-9]{6,15})/)
     if (accountMatch) {
       const acc = accountMatch[1]
-      // Nếu là chuỗi "028881119990208", acc sẽ là 2888111999 (nếu Regex lấy được đoạn giữa)
-      // Thử tinh chỉnh để lấy số tài khoản chính xác nhất
       let finalAcc = acc
       if (data.startsWith('0') && acc.length > 10) {
-          // Một số định dạng có số 0 ở đầu và checksum ở cuối, thử lấy đoạn 10-12 số
-          // Với TCB của bạn, 2888111999 là 10 số.
           const tcbCandidate = data.match(/([0-9]{10,12})/)
           if (tcbCandidate) finalAcc = tcbCandidate[1]
       }
 
-      // Nếu chứa "028881119990208", ta mặc định ưu tiên tìm bank nếu có thể, 
-      // hoặc trả về bankCode null để người dùng tự chọn bank sau khi quét
       return {
-        bankCode: null, // Không đoán bank từ chuỗi thô để tránh sai sót
+        bankCode: null,
         accountNumber: finalAcc
       }
     }
@@ -136,30 +129,4 @@ export function buildQrUrl(
   const encoded = encodeURIComponent(addInfo)
   const nameEncoded = encodeURIComponent(accountName)
   return `${VIETQR_BASE}/${bankCode}-${accountNumber}-compact2.png?amount=${amount}&addInfo=${encoded}&accountName=${nameEncoded}`
-}
-
-export async function lookupAccountName(bankCode: string, accountNumber: string): Promise<string | null> {
-  try {
-    const bin = BANK_OPTIONS.find(b => b.code === bankCode)?.bin
-    if (!bin) return null
-    
-    const res = await fetch('https://api.vietqr.io/v2/lookup', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        bin,
-        accountNumber,
-      }),
-    })
-    const data = await res.json()
-    if (data.code === '00') {
-      return data.data.accountName
-    }
-    return null
-  } catch (e) {
-    console.error('Lookup Error:', e)
-    return null
-  }
 }

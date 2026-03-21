@@ -129,7 +129,7 @@ export async function PATCH(
 
         if (defaultBatch) {
           // Sync bank info from Default Batch to Session when turning OFF split
-          if (defaultBatch.qr_payload) {
+          if (defaultBatch.qr_payload || defaultBatch.bank_account) {
             updates.host_default_bank_name = defaultBatch.bank_name
             updates.host_default_bank_account = defaultBatch.bank_account
             updates.host_default_qr_payload = defaultBatch.qr_payload

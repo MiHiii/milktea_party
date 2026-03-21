@@ -164,44 +164,6 @@ export default function SessionClient({ initialSession, initialParticipants, ini
     }
   }, [session.id, session.batch_configs])
 
-  const processQRData = useCallback((data: string, batchId: string | null = null) => {
-    const { bankCode, accountNumber } = parseVietQR(data)
-    if (batchId) {
-      const b = orderBatches.find(bt => bt.id === batchId)
-      onUpdateBatchBank(batchId, bankCode || b?.bank_name || '', accountNumber || b?.bank_account || '', data)
-    } else {
-      if (bankCode) setBankNameInput(bankCode)
-      if (accountNumber) setBankAccountInput(accountNumber)
-    }
-    return !!(bankCode || accountNumber)
-  }, [orderBatches])
-
-  const handleScanQR = useCallback((file: File) => {
-    if (!file) return
-    const objectUrl = URL.createObjectURL(file); setQrPreviewUrl(objectUrl); setIsProcessingQR(true)
-    const reader = new FileReader(); reader.onload = (event) => {
-      const img = new Image(); img.onload = () => {
-        const analyze = (w: number, h: number, crop = false) => {
-          const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h
-          const ctx = canvas.getContext('2d', { willReadFrequently: true }); if (!ctx) return null
-          if (crop) { const s = Math.min(img.width, img.height) * 0.8; ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, w, h) }
-          else ctx.drawImage(img, 0, 0, w, h)
-          return jsQR(ctx.getImageData(0, 0, w, h).data, w, h)
-        }
-        let w = img.width; let h = img.height; const MAX = 800
-        if (w > MAX || h > MAX) { const r = Math.min(MAX / w, MAX / h); w *= r; h *= r }
-        let code = analyze(Math.floor(w), Math.floor(h))
-        if (!code) code = analyze(Math.floor(img.width * (450 / img.width)), Math.floor(img.height * (450 / img.height)))
-        if (!code) code = analyze(600, 600, true)
-        if (code) { if (!processQRData(code.data, selectedBatchId)) alert('Không tìm thấy STK hợp lệ.') }
-        else alert('Không nhận diện được mã QR.')
-        setIsProcessingQR(false)
-      }
-      img.src = event.target?.result as string
-    }
-    reader.readAsDataURL(file)
-  }, [processQRData, selectedBatchId])
-
   const addItemForm = useForm({ resolver: zodResolver(addItemSchema) as any, defaultValues: { quantity: 1, itemName: '', price: '' as any, sugar: '50%', ice: '50%', order_batch_id: null, pay_separate: true } })
   const discountForm = useForm({ resolver: zodResolver(discountSchema) as any, defaultValues: { discountType: session.discount_type, discountValue: session.discount_value, shippingFee: session.shipping_fee } })
 
@@ -395,6 +357,44 @@ export default function SessionClient({ initialSession, initialParticipants, ini
       }
     } catch (e) { } 
   }, [session.slug, bankNameInput, bankAccountInput])
+
+  const processQRData = useCallback((data: string, batchId: string | null = null) => {
+    const { bankCode, accountNumber } = parseVietQR(data)
+    if (batchId) {
+      const b = orderBatches.find(bt => bt.id === batchId)
+      onUpdateBatchBank(batchId, bankCode || b?.bank_name || '', accountNumber || b?.bank_account || '', data)
+    } else {
+      if (bankCode) setBankNameInput(bankCode)
+      if (accountNumber) setBankAccountInput(accountNumber)
+    }
+    return !!(bankCode || accountNumber)
+  }, [orderBatches, onUpdateBatchBank, bankNameInput, bankAccountInput])
+
+  const handleScanQR = useCallback((file: File) => {
+    if (!file) return
+    const objectUrl = URL.createObjectURL(file); setQrPreviewUrl(objectUrl); setIsProcessingQR(true)
+    const reader = new FileReader(); reader.onload = (event) => {
+      const img = new Image(); img.onload = () => {
+        const analyze = (w: number, h: number, crop = false) => {
+          const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h
+          const ctx = canvas.getContext('2d', { willReadFrequently: true }); if (!ctx) return null
+          if (crop) { const s = Math.min(img.width, img.height) * 0.8; ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, w, h) }
+          else ctx.drawImage(img, 0, 0, w, h)
+          return jsQR(ctx.getImageData(0, 0, w, h).data, w, h)
+        }
+        let w = img.width; let h = img.height; const MAX = 800
+        if (w > MAX || h > MAX) { const r = Math.min(MAX / w, MAX / h); w *= r; h *= r }
+        let code = analyze(Math.floor(w), Math.floor(h))
+        if (!code) code = analyze(Math.floor(img.width * (450 / img.width)), Math.floor(img.height * (450 / img.height)))
+        if (!code) code = analyze(600, 600, true)
+        if (code) { if (!processQRData(code.data, selectedBatchId)) alert('Không tìm thấy STK hợp lệ.') }
+        else alert('Không nhận diện được mã QR.')
+        setIsProcessingQR(false)
+      }
+      img.src = event.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  }, [processQRData, selectedBatchId])
 
   const onToggleSplitBatch = useCallback(async (isSplit: boolean) => {
     if (!isSplit) { 
