@@ -4,7 +4,7 @@ import * as React from 'react'
 import { Session, OrderBatch, OrderItem } from '@/lib/types'
 import { formatVND } from '@/lib/calc'
 import { 
-  Settings, Loader2, Plus, X as XIcon, CheckCircle, Calculator, Camera, Save, Search
+  Settings, Loader2, Plus, X as XIcon, CheckCircle, Calculator, Camera, Save
 } from 'lucide-react'
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle 
@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
-import { lookupAccountName } from '@/lib/vietqr'
 
 // Import Sub-components
 import { SessionConfig } from './host/SessionConfig'
@@ -98,24 +97,8 @@ export function HostSettings({
   BANK_OPTIONS
 }: HostSettingsProps) {
   const [expandedBatchId, setExpandedBatchId] = React.useState<string | null>(null)
-  const [hostAccountName, setHostAccountName] = React.useState('')
-  const [isLookingUp, setIsLookingUp] = React.useState(false)
   const hasSubOrders = session.is_split_batch
 
-  const onLookupGlobal = async () => {
-    if (!bankNameInput || !bankAccountInput) return
-    setIsLookingUp(true)
-    try {
-      const name = await lookupAccountName(bankNameInput, bankAccountInput)
-      if (name) setHostAccountName(name)
-      else setHostAccountName('Không tìm thấy tên')
-    } catch (e) {
-      setHostAccountName('Lỗi tra cứu')
-    } finally {
-      setIsLookingUp(false)
-    }
-  }
-  
   const originalTotal = orderItems.reduce((s, i) => s + i.price * i.quantity, 0)
   const discountVal = session.discount_type === 'percent' 
     ? (originalTotal * (session.discount_value || 0)) / 100 

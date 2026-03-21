@@ -148,12 +148,15 @@ export async function PATCH(
   const { data: updated, error } = await (supabase.from('sessions') as any)
     .update(updates)
     .eq('id', session.id)
-    .select('id, slug, title, host_device_id, status, host_default_bank_name, host_default_bank_account, host_default_qr_payload, discount_type, discount_value, shipping_fee, is_split_batch, use_default_qr_for_all, created_at')
+    .select('id, slug, title, host_device_id, shop_link, host_default_bank_name, host_default_bank_account, host_default_qr_payload, status, discount_type, discount_value, shipping_fee, is_split_batch, use_default_qr_for_all, password, batch_configs, created_at')
     .single()
 
   if (error) {
     return NextResponse.json({ error: 'Update failed' }, { status: 500 })
   }
+
+  const sessionData = { ...updated, has_password: !!updated.password }
+  delete sessionData.password
 
   if (parsed.data.hostName) {
     await (supabase.from('participants') as any)
@@ -162,7 +165,7 @@ export async function PATCH(
       .eq('is_host', true)
   }
 
-  return NextResponse.json({ session: updated })
+  return NextResponse.json({ session: sessionData })
 }
 
 export async function POST(

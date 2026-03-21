@@ -462,7 +462,15 @@ export default function SessionClient({ initialSession, initialParticipants, ini
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items', filter: `session_id=eq.${session.id}` }, (p) => { if (p.eventType === 'INSERT') setOrderItems(prev => [...prev, p.new as OrderItemType]); else if (p.eventType === 'DELETE') setOrderItems(prev => prev.filter(i => i.id !== p.old.id)); else if (p.eventType === 'UPDATE') setOrderItems(prev => prev.map(i => i.id === (p.new as OrderItemType).id ? p.new as OrderItemType : i)) })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `session_id=eq.${session.id}` }, (p) => { if (p.eventType === 'INSERT') setParticipants(prev => [...prev, p.new as Participant]); else if (p.eventType === 'DELETE') setParticipants(prev => prev.filter(par => par.id !== p.old.id)); else if (p.eventType === 'UPDATE') setParticipants(prev => prev.map(par => par.id === (p.new as Participant).id ? p.new as Participant : par)) })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_batches', filter: `session_id=eq.${session.id}` }, (p) => { if (p.eventType === 'INSERT') setOrderBatches(prev => [...prev, p.new as OrderBatch]); else if (p.eventType === 'DELETE') setOrderBatches(prev => prev.filter(b => b.id !== p.old.id)); else if (p.eventType === 'UPDATE') setOrderBatches(prev => prev.map(b => b.id === (p.new as OrderBatch).id ? p.new as OrderBatch : b)) })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${session.id}` }, (p) => { setSession(p.new as Session) })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${session.id}` }, (p) => { 
+        setSession(prev => {
+          const raw = p.new as any
+          return {
+            ...raw,
+            has_password: raw.password !== undefined ? !!raw.password : prev.has_password
+          }
+        })
+      })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [session.id, session.host_device_id, participants, supabase])
