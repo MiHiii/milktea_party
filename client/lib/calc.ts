@@ -8,11 +8,13 @@ export function roundTo1000(amount: number): number {
 }
 
 export function calcSubtotal(items: OrderItem[]): number {
-  return items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  if (!items || !Array.isArray(items)) return 0
+  return items.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0)
 }
 
 export function calcGrandTotal(items: OrderItem[]): number {
-  return items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  if (!items || !Array.isArray(items)) return 0
+  return items.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0)
 }
 
 function calcDiscountFactor(type: 'amount' | 'percent', value: number, total: number): number {
@@ -30,17 +32,22 @@ export function calculateBill(
   allItems: OrderItem[] = [],
   batches: OrderBatch[] = []
 ): BillEntry[] {
+  // Ensure we always have arrays to work with
+  const safeParticipants = Array.isArray(participants) ? participants : []
+  const safeAllItems = Array.isArray(allItems) ? allItems : []
+  const safeBatches = Array.isArray(batches) ? batches : []
+
   const sessionConfigs = (session.batch_configs as Record<string, any>) || {}
   const personalDiscounts = sessionConfigs.personalDiscounts || {}
 
   // 1. SINGLE BATCH MODE
   if (!session.is_split_batch) {
-    const itemsGrandTotal = calcGrandTotal(allItems)
+    const itemsGrandTotal = calcGrandTotal(safeAllItems)
     
     // First, apply personal discounts to subtotals to see what's left for global discount
     let totalAfterPersonalDiscounts = 0
-    const participantData = (participants || []).map(p => {
-      const myItems = allItems.filter(i => i.participant_id === p.id)
+    const participantData = safeParticipants.map(p => {
+      const myItems = safeAllItems.filter(i => i && i.participant_id === p.id)
       const subtotal = calcSubtotal(myItems)
       
       const pDiscCfg = personalDiscounts[p.id] || { type: 'amount', value: 0 }
@@ -71,7 +78,7 @@ export function calculateBill(
       const total = roundTo1000(remaining * billFactor)
 
       const itemBills: ItemBill[] = myItems.map(item => {
-        const itemSubtotal = item.price * item.quantity
+        const itemSubtotal = item.price * (item.quantity || 1)
         const itemPDisc = subtotal > 0 ? (itemSubtotal / subtotal) * pDiscAmount : 0
         const itemRemaining = itemSubtotal - itemPDisc
         
@@ -102,7 +109,7 @@ export function calculateBill(
   // 2. SPLIT BATCH MODE
   const participantsMap = new Map<string, BillEntry>();
 
-  (participants || []).forEach(p => {
+  safeParticipants.forEach(p => {
     participantsMap.set(p.id, {
       participant: p,
       subtotal: 0,
@@ -113,13 +120,13 @@ export function calculateBill(
     })
   })
 
-  const batchIds = Array.from(new Set(allItems.map(i => i.order_batch_id).filter(Boolean)))
+  const batchIds = Array.from(new Set(safeAllItems.map(i => i?.order_batch_id).filter(Boolean)))
   
   batchIds.forEach(batchId => {
-    const batchItems = allItems.filter(i => i.order_batch_id === batchId)
+    const batchItems = safeAllItems.filter(i => i && i.order_batch_id === batchId)
     if (batchItems.length === 0) return
 
-    const batchObj = (batches || []).find(b => b.id === batchId)
+    const batchObj = safeBatches.find(b => b.id === batchId)
     const batchName = batchObj?.name || 'Đơn 1'
     
     const batchSubtotal = calcSubtotal(batchItems)
@@ -134,8 +141,8 @@ export function calculateBill(
     const bFactor = bItemsTotal > 0 ? bFinalTotal / bItemsTotal : 1
     const bDiscountFactor = calcDiscountFactor(bDiscountType, bDiscountValue, bItemsTotal)
 
-    participants.forEach(p => {
-      const pBatchItems = batchItems.filter(i => i.participant_id === p.id)
+    safeParticipants.forEach(p => {
+      const pBatchItems = batchItems.filter(i => i && i.participant_id === p.id)
       if (pBatchItems.length === 0) return
 
       const pSubtotal = calcSubtotal(pBatchItems)
@@ -150,7 +157,7 @@ export function calculateBill(
       entry.total += pTotal
 
       pBatchItems.forEach(item => {
-        const itemSubtotal = item.price * item.quantity
+        const itemSubtotal = item.price * (item.quantity || 1)
         const itemAfterDisc = itemSubtotal * bDiscountFactor
         const itemShipShare = bItemsTotal > 0 ? (itemSubtotal / bItemsTotal) * bShipFee : 0
         const itemTotal = roundTo1000(itemSubtotal * bFactor)

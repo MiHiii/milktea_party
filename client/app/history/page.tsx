@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Clock, Crown, Users, ArrowRight, Plus } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { api } from '@/lib/api'
 import { getOrCreateDeviceId, getParticipantId } from '@/lib/identity'
 import { Session } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
@@ -21,44 +21,37 @@ export default function HistoryPage() {
 
   useEffect(() => {
     const fetchHistory = async () => {
-      const deviceId = getOrCreateDeviceId()
-      const supabase = createClient()
+      try {
+        const deviceId = getOrCreateDeviceId()
 
-      // Find all sessions where user was host
-      const { data: hostSessions } = await supabase
-        .from('sessions')
-        .select('id, slug, title, status, host_device_id, created_at')
-        .eq('host_device_id', deviceId)
-        .order('created_at', { ascending: false })
-        .limit(50)
+        // Find all sessions where user was host
+        const hostSessions = await api.sessions.listByHost(deviceId)
 
-      // Find sessions where the user was a participant (via localStorage keys)
-      const participationKeys = Object.keys(localStorage).filter(k => k.startsWith('p_id_'))
-      const sessionIds = participationKeys.map(k => k.replace('p_id_', ''))
+        // Find sessions where the user was a participant (via localStorage keys)
+        const participationKeys = Object.keys(localStorage).filter(k => k.startsWith('p_id_'))
+        const sessionIds = participationKeys.map(k => k.replace('p_id_', ''))
 
-      let participantSessions: Session[] = []
-      if (sessionIds.length > 0) {
-        const { data } = await supabase
-          .from('sessions')
-          .select('id, slug, title, status, host_device_id, created_at')
-          .in('id', sessionIds)
-          .order('created_at', { ascending: false })
-          .limit(50)
-        participantSessions = (data as any) || []
+        let participantSessions: Session[] = []
+        if (sessionIds.length > 0) {
+          participantSessions = await api.sessions.listByIDs(sessionIds)
+        }
+
+        // Merge and deduplicate
+        const merged = [...(hostSessions || []), ...participantSessions]
+        const seen = new Set<string>()
+        const unique = merged.filter(s => {
+          if (seen.has(s.id)) return false
+          seen.add(s.id)
+          return true
+        })
+
+        unique.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        setSessions(unique)
+      } catch (e) {
+        console.error('Failed to fetch history', e)
+      } finally {
+        setLoading(false)
       }
-
-      // Merge and deduplicate
-      const merged = [...(hostSessions || []), ...participantSessions]
-      const seen = new Set<string>()
-      const unique = merged.filter(s => {
-        if (seen.has(s.id)) return false
-        seen.add(s.id)
-        return true
-      })
-
-      unique.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      setSessions(unique)
-      setLoading(false)
     }
 
     fetchHistory()

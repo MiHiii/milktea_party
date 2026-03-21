@@ -103,7 +103,7 @@ export async function PATCH(
 
   // Handle smart toggle logic for Split Batch via Atomic RPC (with JS Fallback)
   if (parsed.data.isSplitBatch !== undefined && parsed.data.isSplitBatch !== session.is_split_batch) {
-    const { error: rpcError } = await supabase.rpc('toggle_session_split_batch', {
+    const { error: rpcError } = await (supabase.rpc as any)('toggle_session_split_batch', {
       target_session_id: session.id,
       is_enabling: parsed.data.isSplitBatch
     })

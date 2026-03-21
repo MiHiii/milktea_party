@@ -12,17 +12,13 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { getOrCreateDeviceId, setParticipantId } from '@/lib/identity'
-import { BANK_OPTIONS } from '@/lib/vietqr'
+import { api } from '@/lib/api'
 import { generateSlug } from '@/lib/slug'
 
 const schema = z.object({
   title: z.string().min(1, 'Tên đơn không được để trống').max(100),
   shopLink: z.string().url('Link không hợp lệ').optional().or(z.literal('')),
-  bankName: z.string().optional().or(z.literal('')),
-  bankAccount: z.string().optional().or(z.literal('')),
-  shippingFee: z.coerce.number().min(0).default(0),
   hostName: z.string().min(1, 'Tên của bạn không được để trống').max(50),
   sessionPassword: z.string().max(100).optional().or(z.literal('')),
 })
@@ -37,42 +33,37 @@ export default function HomePage() {
 
   // Join room state
   const [joinId, setJoinId] = useState('')
-  const [joinLoading, setJoinLoading] = useState(false)
   const [joinError, setJoinError] = useState('')
 
-  const { register, handleSubmit, watch, formState: { errors }, setValue } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema) as any,
-    defaultValues: { shippingFee: 0 },
+    defaultValues: { title: '', shopLink: '', hostName: '', sessionPassword: '' },
   })
 
   const onSubmit = async (data: FormData) => {
     setLoading(true)
+    setCreateError('')
     try {
       const deviceId = getOrCreateDeviceId()
 
-      const res = await fetch('/api/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: data.title,
-          shopLink: data.shopLink,
-          hostDeviceId: deviceId,
-          hostName: data.hostName,
-          password: showPassword ? data.sessionPassword : undefined,
-        }),
+      const res = await api.sessions.create({
+        slug: generateSlug(),
+        title: data.title,
+        shopLink: data.shopLink || null,
+        host_device_id: deviceId,
+        hostName: data.hostName,
+        password: showPassword && data.sessionPassword ? data.sessionPassword : null,
       })
 
-      if (!res.ok) throw new Error('Failed to create session')
-      const json = await res.json()
-
-      if (json.participantId) {
-        setParticipantId(json.session.id, json.participantId)
+      // Go backend returns { session: domain.Session, participant: domain.Participant }
+      if (res.participant?.id) {
+        setParticipantId(res.session.id, res.participant.id)
       }
 
-      router.push(`/s/${json.session.slug}`)
-    } catch (e) {
+      router.push(`/s/${res.session.slug}`)
+    } catch (e: any) {
       console.error(e)
-      setCreateError('Có lỗi xảy ra khi tạo đơn. Vui lòng thử lại!')
+      setCreateError(e.message || 'Có lỗi xảy ra khi tạo đơn. Vui lòng thử lại!')
     } finally {
       setLoading(false)
     }
@@ -123,22 +114,22 @@ export default function HomePage() {
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
               <Input
                 id="hostName"
-                label="Tên của bạn (Host)"
-                placeholder="Ví dụ: Hùng"
+                placeholder="Tên của bạn (Host)"
+                className="rounded-2xl h-12"
                 error={errors.hostName?.message}
                 {...register('hostName')}
               />
               <Input
                 id="title"
-                label="Tên đơn"
-                placeholder="Ví dụ: Trà sữa chiều thứ 6"
+                placeholder="Tên đơn (v/d: Trà sữa chiều thứ 6)"
+                className="rounded-2xl h-12"
                 error={errors.title?.message}
                 {...register('title')}
               />
               <Input
                 id="shopLink"
-                label="Link shop / menu (tuỳ chọn)"
-                placeholder="https://shopeefood.vn/..."
+                placeholder="Link shop / menu (tuỳ chọn)"
+                className="rounded-2xl h-12"
                 error={errors.shopLink?.message}
                 {...register('shopLink')}
               />
@@ -174,11 +165,11 @@ export default function HomePage() {
                 </div>
               )}
 
-              <Button type="submit" size="lg" disabled={loading} className="mt-2 w-full">
+              <Button type="submit" size="lg" disabled={loading} className="mt-2 w-full rounded-2xl h-14 font-bold bg-blue-600 hover:bg-blue-500">
                 {loading ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Đang tạo...</>
+                  <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Đang tạo...</>
                 ) : (
-                  <><Plus className="w-4 h-4" /> Tạo nhóm ngay <ChevronRight className="w-4 h-4" /></>
+                  <><Plus className="w-4 h-4 mr-2" /> Tạo nhóm ngay <ChevronRight className="w-4 h-4 ml-1" /></>
                 )}
               </Button>
             </form>
@@ -191,7 +182,7 @@ export default function HomePage() {
         </Card>
 
         {/* Join form */}
-        <Card className="bg-white/5 border-white/10 mt-4">
+        <Card className="bg-white/5 border-white/10 mt-4 rounded-3xl">
           <CardContent className="pt-6">
             <h3 className="text-sm font-semibold text-white/80 flex items-center gap-2 mb-3">
               <DoorOpen className="w-4 h-4 text-emerald-400" />
@@ -200,12 +191,11 @@ export default function HomePage() {
             <div className="flex flex-col gap-2">
               <div className="flex gap-2">
                 <Input
-                  className="bg-black/20 font-mono text-sm placeholder:font-sans"
-                  placeholder="Nhập mã đơn (VD: ngon-sua-vits)"
+                  className="bg-black/20 font-mono text-sm placeholder:font-sans rounded-xl h-11"
+                  placeholder="Nhập mã 6 số (123456) hoặc slug (ngon-sua-vits)"
                   value={joinId}
                   onChange={(e) => {
-                    // Strip # and spaces, lowercase
-                    const val = e.target.value.replace(/[#\s]+/g, '-').toLowerCase()
+                    const val = e.target.value.trim().toLowerCase()
                     setJoinId(val)
                     setJoinError('')
                   }}
@@ -219,11 +209,12 @@ export default function HomePage() {
                 />
                 <Button
                   variant="secondary"
+                  className="rounded-xl px-6"
                   onClick={() => {
                     const slug = joinId.trim().replace(/^#/, '')
                     if (slug) router.push(`/s/${slug}`)
                   }}
-                  disabled={!joinId.trim() || joinLoading}
+                  disabled={!joinId.trim()}
                 >
                   Vào ngay
                 </Button>
