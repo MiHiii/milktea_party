@@ -91,7 +91,9 @@ export interface BillEntry {
 
 // ─── API Request Types ───────────────────────────────────────────────────
 
-export interface CreateSessionRequest extends Partial<Session> {
+export interface CreateSessionRequest {
+  title: string
+  shopLink: string | null
   hostName: string
   password?: string | null
 }

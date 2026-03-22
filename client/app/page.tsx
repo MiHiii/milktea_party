@@ -44,12 +44,9 @@ export default function HomePage() {
     setLoading(true)
     setCreateError('')
     try {
-      const deviceId = getOrCreateDeviceId()
-
       const res = await api.sessions.create({
         title: data.title,
         shopLink: data.shopLink || null,
-        hostDeviceId: deviceId,
         hostName: data.hostName,
         password: showPassword && data.sessionPassword ? data.sessionPassword : null,
       })

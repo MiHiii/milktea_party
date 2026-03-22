@@ -65,7 +65,19 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Println("Migrations rolled back successfully!")
+	case "force":
+		if len(args) < 2 {
+			log.Fatal("Version number required for force command")
+		}
+		var version int
+		if _, err := fmt.Sscanf(args[1], "%d", &version); err != nil {
+			log.Fatal("Invalid version number")
+		}
+		if err := m.Force(version); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Forced version to %d\n", version)
 	default:
-		log.Fatalf("Unknown command: %s. Use up or down", command)
+		log.Fatalf("Unknown command: %s. Use up, down or force", command)
 	}
 }
