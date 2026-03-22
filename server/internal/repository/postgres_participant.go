@@ -19,11 +19,11 @@ func NewParticipantRepository(db *PostgresPool) ParticipantRepository {
 
 func (r *postgresParticipantRepository) Create(ctx context.Context, p *domain.Participant) error {
 	query := `
-		INSERT INTO participants (session_id, name, is_host, is_paid)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO participants (session_id, device_id, name, is_host, is_paid)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id, last_active`
 
-	err := r.db.Pool.QueryRow(ctx, query, p.SessionID, p.Name, p.IsHost, p.IsPaid).
+	err := r.db.Pool.QueryRow(ctx, query, p.SessionID, p.DeviceID, p.Name, p.IsHost, p.IsPaid).
 		Scan(&p.ID, &p.LastActive)
 
 	if err != nil {
@@ -34,11 +34,11 @@ func (r *postgresParticipantRepository) Create(ctx context.Context, p *domain.Pa
 }
 
 func (r *postgresParticipantRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Participant, error) {
-	query := `SELECT id, session_id, name, is_host, is_paid, last_active FROM participants WHERE id = $1`
+	query := `SELECT id, session_id, device_id, name, is_host, is_paid, last_active FROM participants WHERE id = $1`
 
 	var p domain.Participant
 	err := r.db.Pool.QueryRow(ctx, query, id).
-		Scan(&p.ID, &p.SessionID, &p.Name, &p.IsHost, &p.IsPaid, &p.LastActive)
+		Scan(&p.ID, &p.SessionID, &p.DeviceID, &p.Name, &p.IsHost, &p.IsPaid, &p.LastActive)
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -51,7 +51,7 @@ func (r *postgresParticipantRepository) GetByID(ctx context.Context, id uuid.UUI
 }
 
 func (r *postgresParticipantRepository) GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]domain.Participant, error) {
-	query := `SELECT id, session_id, name, is_host, is_paid, last_active FROM participants WHERE session_id = $1`
+	query := `SELECT id, session_id, device_id, name, is_host, is_paid, last_active FROM participants WHERE session_id = $1`
 
 	rows, err := r.db.Pool.Query(ctx, query, sessionID)
 	if err != nil {
@@ -62,7 +62,7 @@ func (r *postgresParticipantRepository) GetBySessionID(ctx context.Context, sess
 	var participants []domain.Participant
 	for rows.Next() {
 		var p domain.Participant
-		if err := rows.Scan(&p.ID, &p.SessionID, &p.Name, &p.IsHost, &p.IsPaid, &p.LastActive); err != nil {
+		if err := rows.Scan(&p.ID, &p.SessionID, &p.DeviceID, &p.Name, &p.IsHost, &p.IsPaid, &p.LastActive); err != nil {
 			return nil, fmt.Errorf("failed to scan participant: %w", err)
 		}
 		participants = append(participants, p)

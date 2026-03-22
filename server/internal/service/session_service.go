@@ -65,6 +65,7 @@ func (s *sessionService) Create(ctx context.Context, session *domain.Session, ho
 			// Success creating session, now create the host participant
 			host := &domain.Participant{
 				SessionID: session.ID,
+				DeviceID:  session.HostDeviceID,
 				Name:      hostName,
 				IsHost:    true,
 			}

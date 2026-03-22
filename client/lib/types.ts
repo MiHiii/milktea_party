@@ -46,6 +46,7 @@ export interface Session {
 export interface Participant {
   id: string
   sessionId: string
+  deviceId: string
   name: string
   isHost: boolean
   isPaid: boolean

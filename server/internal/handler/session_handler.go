@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"milktea-server/internal/middleware"
 	"net/http"
 	"strings"
 
@@ -28,6 +29,10 @@ func (h *SessionHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Use device ID from middleware
+	deviceID := middleware.GetDeviceID(c)
+	req.Session.HostDeviceID = deviceID
 
 	participant, err := h.svc.Create(c.Request.Context(), &req.Session, req.HostName)
 	if err != nil {
@@ -119,11 +124,17 @@ func (h *SessionHandler) Delete(c *gin.Context) {
 }
 
 func (h *SessionHandler) ListByHost(c *gin.Context) {
-	hostDeviceIDStr := c.Query("hostDeviceId")
-	hostDeviceID, err := uuid.Parse(hostDeviceIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid hostDeviceId"})
-		return
+	// Prioritize device ID from middleware, fallback to query param
+	hostDeviceID := middleware.GetDeviceID(c)
+
+	if hostDeviceID == uuid.Nil {
+		hostDeviceIDStr := c.Query("hostDeviceId")
+		var err error
+		hostDeviceID, err = uuid.Parse(hostDeviceIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid hostDeviceId"})
+			return
+		}
 	}
 
 	sessions, err := h.svc.ListByHost(c.Request.Context(), hostDeviceID)

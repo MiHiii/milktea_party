@@ -1,4 +1,5 @@
 import { Session, Participant, OrderItem, OrderBatch, CreateSessionRequest } from './types'
+import { getOrCreateDeviceId } from './identity'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL;
@@ -10,14 +11,25 @@ if (!API_URL && typeof window !== 'undefined') {
 const BASE_URL = API_URL || 'http://localhost:8080/api';
 const BASE_WS = WS_URL || 'ws://localhost:8080/ws';
 
+const DEVICE_ID_KEY = 'milkteaDeviceId'
+
 export async function fetcher<T>(path: string, options?: RequestInit): Promise<T> {
+  const deviceId = getOrCreateDeviceId();
+  
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      'X-Device-ID': deviceId,
       ...options?.headers,
     },
   });
+
+  // Check if server returned a new Device ID
+  const newDeviceId = res.headers.get('X-Device-ID');
+  if (newDeviceId && typeof window !== 'undefined') {
+    localStorage.setItem(DEVICE_ID_KEY, newDeviceId);
+  }
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ error: 'Unknown error' }));

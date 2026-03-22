@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"milktea-server/internal/middleware"
 	"net/http"
 
 	"milktea-server/internal/domain"
@@ -23,6 +24,9 @@ func (h *ParticipantHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Use device ID from middleware
+	p.DeviceID = middleware.GetDeviceID(c)
 
 	if err := h.svc.Create(c.Request.Context(), &p); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"milktea-server/internal/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,6 +14,7 @@ type Router struct {
 
 func (r *Router) Register(engine *gin.Engine) {
 	api := engine.Group("/api")
+	api.Use(middleware.DeviceIDMiddleware())
 	{
 		// Sessions
 		sessions := api.Group("/sessions")

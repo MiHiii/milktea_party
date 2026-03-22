@@ -31,6 +31,7 @@ type Session struct {
 type Participant struct {
 	ID         uuid.UUID `json:"id" db:"id"`
 	SessionID  uuid.UUID `json:"sessionId" db:"session_id"`
+	DeviceID   uuid.UUID `json:"deviceId" db:"device_id"`
 	Name       string    `json:"name" db:"name"`
 	IsHost     bool      `json:"isHost" db:"is_host"`
 	IsPaid     bool      `json:"isPaid" db:"is_paid"`

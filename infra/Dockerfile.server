@@ -13,17 +13,24 @@ RUN go mod download
 # Copy toàn bộ mã nguồn
 COPY . .
 
-# Build binary
+# Build main binary
 RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/main.go
+
+# Build migrate binary
+RUN CGO_ENABLED=0 GOOS=linux go build -o migrate ./cmd/migrate/main.go
 
 # Stage 2: Run
 FROM alpine:latest
 
-WORKDIR /root/
+# Cài đặt ca-certificates để hỗ trợ HTTPS (cần thiết cho DB connection chuỗi pgx)
+RUN apk add --no-cache ca-certificates
 
-# Copy binary từ builder
+WORKDIR /app
+
+# Copy binaries từ builder
 COPY --from=builder /app/main .
-# Copy folder migrations nếu cần chạy migrate trong container
+COPY --from=builder /app/migrate .
+# Copy folder migrations
 COPY --from=builder /app/migrations ./migrations
 
 # Expose port

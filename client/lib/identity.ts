@@ -1,26 +1,10 @@
 // Identity Management - localStorage-based pId per session
 
-const DEVICE_ID_KEY = 'milkteaDeviceId'
+export const DEVICE_ID_KEY = 'milkteaDeviceId'
 
 export function getOrCreateDeviceId(): string {
   if (typeof window === 'undefined') return ''
-  try {
-    let id = localStorage.getItem(DEVICE_ID_KEY)
-    if (!id) {
-      // crypto.randomUUID only works in secure contexts (HTTPS)
-      // We use it if available, or fallback to a simple random string for compatibility
-      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-        id = crypto.randomUUID()
-      } else {
-        id = 'dev-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11)
-      }
-      localStorage.setItem(DEVICE_ID_KEY, id)
-    }
-    return id
-  } catch (e) {
-    console.warn('localStorage not available', e)
-    return 'temp-' + Math.random().toString(36).substring(2, 11)
-  }
+  return localStorage.getItem(DEVICE_ID_KEY) || ''
 }
 
 export function getParticipantId(sessionId: string): string | null {
