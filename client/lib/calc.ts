@@ -37,17 +37,17 @@ export function calculateBill(
   const safeAllItems = Array.isArray(allItems) ? allItems : []
   const safeBatches = Array.isArray(batches) ? batches : []
 
-  const sessionConfigs = (session.batch_configs as Record<string, any>) || {}
+  const sessionConfigs = (session.batchConfigs as Record<string, any>) || {}
   const personalDiscounts = sessionConfigs.personalDiscounts || {}
 
   // 1. SINGLE BATCH MODE
-  if (!session.is_split_batch) {
+  if (!session.isSplitBatch) {
     const itemsGrandTotal = calcGrandTotal(safeAllItems)
     
     // First, apply personal discounts to subtotals to see what's left for global discount
     let totalAfterPersonalDiscounts = 0
     const participantData = safeParticipants.map(p => {
-      const myItems = safeAllItems.filter(i => i && i.participant_id === p.id)
+      const myItems = safeAllItems.filter(i => i && i.participantId === p.id)
       const subtotal = calcSubtotal(myItems)
       
       const pDiscCfg = personalDiscounts[p.id] || { type: 'amount', value: 0 }
@@ -64,13 +64,13 @@ export function calculateBill(
       return { p, subtotal, pDiscAmount, remaining, myItems }
     }).filter(d => d.myItems.length > 0)
 
-    const globalDiscountValue = session.discount_value || 0
-    const globalShipFee = session.shipping_fee || 0
+    const globalDiscountValue = session.discountValue || 0
+    const globalShipFee = session.shippingFee || 0
     
     // Final bill total after all adjustments
     const finalBillTotal = totalAfterPersonalDiscounts - globalDiscountValue + globalShipFee
     const billFactor = totalAfterPersonalDiscounts > 0 ? finalBillTotal / totalAfterPersonalDiscounts : 1
-    const globalDiscountFactor = calcDiscountFactor(session.discount_type, globalDiscountValue, totalAfterPersonalDiscounts)
+    const globalDiscountFactor = calcDiscountFactor(session.discountType, globalDiscountValue, totalAfterPersonalDiscounts)
 
     return participantData.map(({ p, subtotal, pDiscAmount, remaining, myItems }) => {
       const afterGlobalDiscount = remaining * globalDiscountFactor
@@ -120,10 +120,10 @@ export function calculateBill(
     })
   })
 
-  const batchIds = Array.from(new Set(safeAllItems.map(i => i?.order_batch_id).filter(Boolean)))
+  const batchIds = Array.from(new Set(safeAllItems.map(i => i?.orderBatchId).filter(Boolean)))
   
   batchIds.forEach(batchId => {
-    const batchItems = safeAllItems.filter(i => i && i.order_batch_id === batchId)
+    const batchItems = safeAllItems.filter(i => i && i.orderBatchId === batchId)
     if (batchItems.length === 0) return
 
     const batchObj = safeBatches.find(b => b.id === batchId)
@@ -142,7 +142,7 @@ export function calculateBill(
     const bDiscountFactor = calcDiscountFactor(bDiscountType, bDiscountValue, bItemsTotal)
 
     safeParticipants.forEach(p => {
-      const pBatchItems = batchItems.filter(i => i && i.participant_id === p.id)
+      const pBatchItems = batchItems.filter(i => i && i.participantId === p.id)
       if (pBatchItems.length === 0) return
 
       const pSubtotal = calcSubtotal(pBatchItems)

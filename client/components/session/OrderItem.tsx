@@ -51,7 +51,7 @@ export function OrderItem({
   isLoading,
   PERCENT_OPTIONS
 }: OrderItemProps) {
-  const canEditItem = (iAmHost || item.participant_id === myParticipantId) && session.status === 'open'
+  const canEditItem = (iAmHost || item.participantId === myParticipantId) && session.status === 'open'
 
   if (isEditing) {
     return (
@@ -145,7 +145,7 @@ export function OrderItem({
         </div>
 
         {/* CHIA ĐƠN */}
-        {session.is_split_batch && (
+        {session.isSplitBatch && (
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] text-emerald-500/60 font-black uppercase ml-1 tracking-[0.15em]">CHIA ĐƠN</label>
             <div className="relative w-full">
@@ -202,16 +202,16 @@ export function OrderItem({
       <div className="flex justify-between items-center gap-3">
         <div className="flex items-center gap-2 truncate flex-1">
           <span className="shrink-0 flex items-center justify-center bg-white/5 rounded-md px-1.5 py-0.5 text-[9px] font-bold text-white/30 border border-white/5">{item.quantity}</span>
-          <span className="text-white/70 text-xs truncate font-medium">{item.item_name}</span>
-          {item.pay_separate && <QrCode className="w-3.5 h-3.5 text-sky-400 shrink-0" />}
+          <span className="text-white/70 text-xs truncate font-medium">{item.itemName}</span>
+          {item.paySeparate && <QrCode className="w-3.5 h-3.5 text-sky-400 shrink-0" />}
         </div>
         <span className="tabular-nums text-white/90 text-[11px] font-black shrink-0">{formatVND(item.price * item.quantity)}</span>
       </div>
       <div className="flex items-center justify-between mt-1.5 gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap gap-1.5 items-center">
-            {session.is_split_batch && (() => {
-              const b = orderBatches.find(bt => bt.id === item.order_batch_id);
+            {session.isSplitBatch && (() => {
+              const b = orderBatches.find(bt => bt.id === item.orderBatchId);
               return b ? (<span className="text-[8px] font-black text-emerald-400/50 uppercase tracking-tighter bg-emerald-500/5 px-1.5 py-0.5 rounded-full border border-emerald-500/5">{b.name}</span>) : null
             })()}
             {(item.note || item.ice || item.sugar) && (

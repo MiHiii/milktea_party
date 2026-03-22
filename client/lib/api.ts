@@ -1,10 +1,17 @@
-import { Session, Participant, OrderItem, OrderBatch } from './types'
+import { Session, Participant, OrderItem, OrderBatch, CreateSessionRequest } from './types'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL;
+
+if (!API_URL && typeof window !== 'undefined') {
+  console.warn('NEXT_PUBLIC_API_URL is not defined. Falling back to localhost for development.');
+}
+
+const BASE_URL = API_URL || 'http://localhost:8080/api';
+const BASE_WS = WS_URL || 'ws://localhost:8080/ws';
 
 export async function fetcher<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -25,7 +32,12 @@ export const api = {
   sessions: {
     get: (id: string) => fetcher<Session>(`/sessions/${id}`),
     getBySlug: (slug: string) => fetcher<Session>(`/sessions/slug/${slug}`),
-    create: (data: Partial<Session> & { hostName: string }) => 
+    verifyPassword: (slug: string, password: string) => 
+      fetcher<{ success: boolean }>(`/sessions/slug/${slug}/verify`, { 
+        method: 'POST', 
+        body: JSON.stringify({ password }) 
+      }),
+    create: (data: CreateSessionRequest) => 
       fetcher<{session: Session, participant: Participant}>('/sessions', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<Session>) => 
       fetcher<Session>(`/sessions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -58,5 +70,5 @@ export const api = {
 };
 
 export function createWS(sessionId: string) {
-  return new WebSocket(`${WS_URL}/${sessionId}`);
+  return new WebSocket(`${BASE_WS}/${sessionId}`);
 }

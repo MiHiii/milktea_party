@@ -158,3 +158,28 @@ func (h *SessionHandler) ListByBatch(c *gin.Context) {
 
 	c.JSON(http.StatusOK, sessions)
 }
+
+func (h *SessionHandler) VerifyPassword(c *gin.Context) {
+	slug := c.Param("slug")
+	var req struct {
+		Password string `json:"password"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	success, err := h.svc.VerifyPassword(c.Request.Context(), slug, req.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !success {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}

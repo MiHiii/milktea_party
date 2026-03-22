@@ -26,18 +26,18 @@ export const BANK_OPTIONS = [
 ]
 
 export function getPaymentQR(session: Session, batch?: OrderBatch): QRInfo {
-  if (session.use_default_qr_for_all || !batch) {
+  if (session.useDefaultQrForAll || !batch) {
     return {
-      bankName: session.host_default_bank_name,
-      bankAccount: session.host_default_bank_account,
-      qrPayload: session.host_default_qr_payload
+      bankName: session.hostDefaultBankName,
+      bankAccount: session.hostDefaultBankAccount,
+      qrPayload: session.hostDefaultQrPayload
     }
   }
 
   return {
-    bankName: batch.bank_name || session.host_default_bank_name,
-    bankAccount: batch.bank_account || session.host_default_bank_account,
-    qrPayload: batch.qr_payload || session.host_default_qr_payload
+    bankName: batch.bankName || session.hostDefaultBankName,
+    bankAccount: batch.bankAccount || session.hostDefaultBankAccount,
+    qrPayload: batch.qrPayload || session.hostDefaultQrPayload
   }
 }
 
@@ -59,7 +59,7 @@ function parseEMVCo(data: string): Record<string, string> {
   return tags
 }
 
-export function parseVietQR(data: string): { bankCode: string | null; accountNumber: string | null } {
+export function parseVietQR(data: string): { bankName: string | null; bankAccount: string | null } {
   try {
     // 1. Xử lý định dạng URL (vietqr.net/v2/...)
     if (data.includes('vietqr.net')) {
@@ -69,8 +69,8 @@ export function parseVietQR(data: string): { bankCode: string | null; accountNum
         const potentialBank = pathParts[1]
         const bank = BANK_OPTIONS.find(b => b.code === potentialBank || b.bin === potentialBank || b.shortName === potentialBank)
         return {
-          bankCode: bank ? bank.code : potentialBank,
-          accountNumber: pathParts[2]
+          bankName: bank ? bank.code : potentialBank,
+          bankAccount: pathParts[2]
         }
       }
     }
@@ -89,8 +89,8 @@ export function parseVietQR(data: string): { bankCode: string | null; accountNum
           
           const bank = BANK_OPTIONS.find(b => b.bin === bin)
           return {
-            bankCode: bank ? bank.code : bin,
-            accountNumber: acc || null
+            bankName: bank ? bank.code : bin,
+            bankAccount: acc || null
           }
         }
       }
@@ -107,15 +107,15 @@ export function parseVietQR(data: string): { bankCode: string | null; accountNum
       }
 
       return {
-        bankCode: null,
-        accountNumber: finalAcc
+        bankName: null,
+        bankAccount: finalAcc
       }
     }
 
-    return { bankCode: null, accountNumber: null }
+    return { bankName: null, bankAccount: null }
   } catch (e) {
     console.error('VietQR Parse Error', e)
-    return { bankCode: null, accountNumber: null }
+    return { bankName: null, bankAccount: null }
   }
 }
 

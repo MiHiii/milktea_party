@@ -43,8 +43,8 @@ const addItemSchema = z.object({
   note: z.string().max(200).optional().or(z.literal('')),
   ice: z.string().optional(),
   sugar: z.string().optional(),
-  order_batch_id: z.string().uuid().nullable().optional(),
-  pay_separate: z.boolean().default(true),
+  orderBatchId: z.string().uuid().nullable().optional(),
+  paySeparate: z.boolean().default(true),
 })
 
 const PERCENT_OPTIONS = ['0%', '30%', '50%', '70%', '100%']
@@ -64,7 +64,7 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   const [expandedParticipant, setExpandedParticipant] = useState<string | null>(null)
   const [showQrs, setShowQrs] = useState(false)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
-  const [editDraft, setEditDraft] = useState({ itemName: '', price: '', quantity: '', note: '', ice: '50%', sugar: '50%', order_batch_id: null as string | null, pay_separate: false })
+  const [editDraft, setEditDraft] = useState({ itemName: '', price: '', quantity: '', note: '', ice: '50%', sugar: '50%', orderBatchId: null as string | null, paySeparate: false })
   const [justAdded, setJustAdded] = useState(false)
   const [hostControlsOpen, setHostControlsOpen] = useState(false)
   const [finalTotal, setFinalTotal] = useState('')
@@ -72,8 +72,8 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   const [batchNameDraft, setBatchNameDraft] = useState('')
   const [showNewBatch, setShowNewBatch] = useState(false)
   const [newBatchDraft, setNewBatchDraft] = useState('')
-  const [bankNameInput, setBankNameInput] = useState(initialSession.host_default_bank_name || '')
-  const [bankAccountInput, setBankAccountInput] = useState(initialSession.host_default_bank_account || '')
+  const [bankNameInput, setBankNameInput] = useState(initialSession.hostDefaultBankName || '')
+  const [bankAccountInput, setBankAccountInput] = useState(initialSession.hostDefaultBankAccount || '')
   const [showPasswordEdit, setShowPasswordEdit] = useState(false)
   const [hostPasswordDraft, setHostPasswordDraft] = useState('')
   const [passwordVerified, setPasswordVerified] = useState(true)
@@ -104,11 +104,11 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   // 1. Initial State & Logic Cleanup
   useEffect(() => {
     setMounted(true)
-    const amHost = isHost(initialSession.host_device_id)
+    const amHost = isHost(initialSession.hostDeviceId)
     setIAmHost(amHost)
 
-    if (initialSession.has_password) {
-      const isVerified = sessionStorage.getItem(`session_verified_${initialSession.id}`) === 'true'
+    if (initialSession.hasPassword) {
+      const isVerified = sessionStorage.getItem(`sessionVerified_${initialSession.id}`) === 'true'
       if (!amHost && !isVerified) setPasswordVerified(false)
     }
 
@@ -117,7 +117,7 @@ export default function SessionClient({ initialSession, initialParticipants, ini
       setMyParticipantId(savedPid)
       setExpandedParticipant(savedPid)
     } else if (amHost) {
-      const hostP = initialParticipants.find(p => p.is_host)
+      const hostP = initialParticipants.find(p => p.isHost)
       if (hostP) {
         setParticipantId(initialSession.id, hostP.id)
         setMyParticipantId(hostP.id)
@@ -182,13 +182,13 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   // 3. Form & UI Actions
   const addItemForm = useForm({ 
     resolver: zodResolver(addItemSchema) as any, 
-    defaultValues: { quantity: 1, itemName: '', price: '' as any, note: '', sugar: '50%', ice: '50%', order_batch_id: null as string | null, pay_separate: true } 
+    defaultValues: { quantity: 1, itemName: '', price: '' as any, note: '', sugar: '50%', ice: '50%', orderBatchId: null as string | null, paySeparate: true } 
   })
 
   useEffect(() => { 
-    if (orderBatches.length > 0 && !addItemForm.getValues('order_batch_id')) {
-      const def = orderBatches.find(b => b.is_default) || orderBatches[0]
-      addItemForm.setValue('order_batch_id', def.id)
+    if (orderBatches.length > 0 && !addItemForm.getValues('orderBatchId')) {
+      const def = orderBatches.find(b => b.isDefault) || orderBatches[0]
+      addItemForm.setValue('orderBatchId', def.id)
     }
   }, [orderBatches, addItemForm])
 
@@ -199,14 +199,14 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   const startEdit = useCallback((item: OrderItemType) => { 
     setEditingItemId(item.id)
     setEditDraft({ 
-      itemName: item.item_name, 
+      itemName: item.itemName, 
       price: String(item.price), 
       quantity: String(item.quantity), 
       note: item.note || '', 
       ice: item.ice || '50%', 
       sugar: item.sugar || '50%', 
-      order_batch_id: item.order_batch_id, 
-      pay_separate: !!item.pay_separate 
+      orderBatchId: item.orderBatchId, 
+      paySeparate: !!item.paySeparate 
     }) 
   }, [])
   
@@ -215,14 +215,14 @@ export default function SessionClient({ initialSession, initialParticipants, ini
     setIsLoading(true)
     try { 
       await api.orderItems.update(itemId, { 
-        item_name: editDraft.itemName, 
+        itemName: editDraft.itemName, 
         price: Number(editDraft.price), 
         quantity: Number(editDraft.quantity), 
         note: editDraft.note || null, 
         ice: editDraft.ice || null, 
         sugar: editDraft.sugar || null, 
-        order_batch_id: editDraft.order_batch_id,
-        pay_separate: !!editDraft.pay_separate 
+        orderBatchId: editDraft.orderBatchId,
+        paySeparate: !!editDraft.paySeparate 
       })
       setEditingItemId(null)
     } finally { setIsLoading(false) } 
@@ -234,16 +234,16 @@ export default function SessionClient({ initialSession, initialParticipants, ini
     setIsLoading(true)
     try { 
       await api.orderItems.create({ 
-        session_id: session.id, 
-        participant_id: myParticipantId, 
-        item_name: data.itemName, 
+        sessionId: session.id, 
+        participantId: myParticipantId, 
+        itemName: data.itemName, 
         price: Number(data.price), 
         quantity: data.quantity, 
         note: data.note || null, 
         ice: data.ice || null, 
         sugar: data.sugar || null, 
-        order_batch_id: data.order_batch_id,
-        pay_separate: !!data.pay_separate 
+        orderBatchId: data.orderBatchId,
+        paySeparate: !!data.paySeparate 
       })
       addItemForm.reset({ ...addItemForm.getValues(), itemName: '', price: '' as any, note: '' })
       setJustAdded(true)
@@ -278,7 +278,7 @@ export default function SessionClient({ initialSession, initialParticipants, ini
 
   // 4. Host Logic
   const lockOrder = useCallback(async () => { 
-    if (!session.host_default_bank_account || !session.host_default_bank_name) {
+    if (!session.hostDefaultBankAccount || !session.hostDefaultBankName) {
       showWarning('Thiếu thông tin Bank', 'Vui lòng bổ sung STK và Ngân hàng của Host.')
       setHostControlsOpen(true)
       return
@@ -336,7 +336,7 @@ export default function SessionClient({ initialSession, initialParticipants, ini
         setNameModalOpen(false)
         return 
       } 
-      const res = await api.participants.create({ session_id: session.id, name: name.trim() })
+      const res = await api.participants.create({ sessionId: session.id, name: name.trim() })
       if (res?.id) { 
         setParticipantId(session.id, res.id)
         setMyParticipantId(res.id)
@@ -360,7 +360,7 @@ export default function SessionClient({ initialSession, initialParticipants, ini
     if (!newBatchDraft) return
     setIsLoading(true)
     try { 
-      await api.orderBatches.create({ session_id: session.id, name: newBatchDraft })
+      await api.orderBatches.create({ sessionId: session.id, name: newBatchDraft })
       setNewBatchDraft('')
       setShowNewBatch(false) 
     } finally { setIsLoading(false) } 
@@ -380,30 +380,29 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   }, [])
 
   const onUpdateBatchBank = useCallback(async (batchId: string, n: string, a: string, q: string) => { 
-    try { await api.orderBatches.update(batchId, { bank_name: n, bank_account: a, qr_payload: q }) } catch { } 
+    try { await api.orderBatches.update(batchId, { bankName: n, bankAccount: a, qrPayload: q }) } catch { } 
   }, [])
 
   const onSaveGlobalBank = useCallback(async (name?: string, account?: string) => { 
     try { 
       const bName = name !== undefined ? name : bankNameInput
       const bAcc = account !== undefined ? account : bankAccountInput
-      await api.sessions.update(session.id, { host_default_bank_name: bName, host_default_bank_account: bAcc })
+      await api.sessions.update(session.id, { hostDefaultBankName: bName, hostDefaultBankAccount: bAcc })
     } catch { } 
   }, [session.id, bankNameInput, bankAccountInput])
 
   const onToggleSplitBatch = useCallback(async (isSplit: boolean) => {
     setIsToggling(true)
     // Optimistic Update
-    setSession(prev => ({ ...prev, is_split_batch: isSplit }))
+    setSession(prev => ({ ...prev, isSplitBatch: isSplit }))
     
     try { 
       await api.sessions.update(session.id, { 
-        is_split_batch: isSplit,
-        isSplitBatch: isSplit // Send both for safety
+        isSplitBatch: isSplit
       }) 
     } catch (e) {
       // Rollback on error
-      setSession(prev => ({ ...prev, is_split_batch: !isSplit }))
+      setSession(prev => ({ ...prev, isSplitBatch: !isSplit }))
     } finally { 
       setIsToggling(false) 
     }
@@ -413,17 +412,17 @@ export default function SessionClient({ initialSession, initialParticipants, ini
     if (e) e.preventDefault()
     setIsLoading(true)
     try {
-      if (session.is_split_batch) {
-        const nC: Record<string, any> = { ...((session.batch_configs as Record<string, any>) || {}) }
+      if (session.isSplitBatch) {
+        const nC: Record<string, any> = { ...((session.batchConfigs as Record<string, any>) || {}) }
         orderBatches.forEach(batch => { 
           const val = batchFinalTotals[batch.id] || ''
           if (val && Number(val) >= 0) { 
             const bT = Number(val)
-            const bIT = orderItems.filter(i => i.order_batch_id === batch.id).reduce((s, i) => s + i.price * i.quantity, 0)
+            const bIT = orderItems.filter(i => i.orderBatchId === batch.id).reduce((s, i) => s + i.price * i.quantity, 0)
             nC[batch.name] = bT >= bIT ? { type: 'amount', value: 0, ship: bT - bIT } : { type: 'amount', value: bIT - bT, ship: 0 }
           } 
         })
-        await api.sessions.update(session.id, { batch_configs: nC })
+        await api.sessions.update(session.id, { batchConfigs: nC })
       } else {
         const iGT = orderItems.reduce((s, i) => s + i.price * i.quantity, 0)
         const t = Number(finalTotal)
@@ -431,9 +430,9 @@ export default function SessionClient({ initialSession, initialParticipants, ini
           const dV = t < iGT ? iGT - t : 0
           const sF = t > iGT ? t - iGT : 0
           await api.sessions.update(session.id, { 
-            discount_type: 'amount', 
-            discount_value: dV, 
-            shipping_fee: sF 
+            discountType: 'amount', 
+            discountValue: dV, 
+            shippingFee: sF 
           })
         } 
       }
@@ -444,21 +443,56 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   const verifyPassword = useCallback(async () => {
     setCheckingPassword(true)
     try {
-      // Custom endpoint for password verification
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/sessions/slug/${session.slug}/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: passwordInput })
-      })
-      if (res.ok) {
-        sessionStorage.setItem(`session_verified_${session.id}`, 'true')
-        setPasswordVerified(true)
-      } else {
-        const j = await res.json()
-        setPasswordError(j.error || 'Sai mật khẩu')
-      }
+      await api.sessions.verifyPassword(session.slug, passwordInput)
+      sessionStorage.setItem(`sessionVerified_${session.id}`, 'true')
+      setPasswordVerified(true)
+    } catch (e: any) {
+      setPasswordError(e.message || 'Sai mật khẩu')
     } finally { setCheckingPassword(false) }
   }, [session, passwordInput])
+
+  const handleScanQR = useCallback(async (file: File) => {
+    setIsProcessingQR(true)
+    try {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          canvas.width = img.width
+          canvas.height = img.height
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return
+          ctx.drawImage(img, 0, 0)
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+          const code = jsQR(imageData.data, canvas.width, canvas.height)
+          if (code) {
+            const result = parseVietQR(code.data)
+            if (result.bankAccount && result.bankName) {
+              if (selectedBatchId) {
+                onUpdateBatchBank(selectedBatchId, result.bankName, result.bankAccount, code.data)
+              } else {
+                setBankNameInput(result.bankName)
+                setBankAccountInput(result.bankAccount)
+                onSaveGlobalBank(result.bankName, result.bankAccount)
+              }
+              alert('🛍️ Đã nhận diện được số tài khoản!')
+            } else {
+              alert('Nhận diện được mã nhưng không tìm thấy số tài khoản hợp lệ.')
+            }
+          } else {
+            alert('Không nhận diện được mã QR. Bạn hãy thử chụp lại rõ hơn nhé!')
+          }
+        }
+        img.src = e.target?.result as string
+        setQrPreviewUrl(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    } finally {
+      setIsProcessingQR(false)
+      setShowActionSheet(false)
+    }
+  }, [selectedBatchId, onUpdateBatchBank, onSaveGlobalBank])
 
   // 5. Derived State
   const billEntries: BillEntry[] = calculateBill(session, participants, orderItems, orderBatches)
@@ -514,7 +548,7 @@ export default function SessionClient({ initialSession, initialParticipants, ini
       </header>
 
       <div className="max-w-2xl mx-auto px-4 pt-3 flex flex-col gap-3">
-        {session.status !== 'open' && myBill && !myBill.participant.is_paid && myBill.total > 0 && ( 
+        {session.status !== 'open' && myBill && !myBill.participant.isPaid && myBill.total > 0 && ( 
           <div className="bg-gradient-to-r from-sky-600/30 to-indigo-600/30 border border-sky-500/30 rounded-[2.5rem] p-6 text-center shadow-2xl"> 
             <p className="text-sm text-white/70 mb-1">Bạn cần thanh toán</p> 
             <p className="text-4xl font-black text-white tabular-nums">{formatVND(myBill.total)}</p> 
@@ -536,10 +570,10 @@ export default function SessionClient({ initialSession, initialParticipants, ini
             <div className="divide-y divide-white/5"> 
               {participants.map(p => (
                 <ParticipantItem 
-                  key={p.id} participant={p} items={orderItems.filter(i => i.participant_id === p.id)} session={session} orderBatches={orderBatches} 
+                  key={p.id} participant={p} items={orderItems.filter(i => i.participantId === p.id)} session={session} orderBatches={orderBatches} 
                   myParticipantId={myParticipantId} iAmHost={iAmHost} isExpanded={expandedParticipant === p.id} onToggleExpand={() => setExpandedParticipant(expandedParticipant === p.id ? null : p.id)} 
                   editingItemId={editingItemId} editDraft={editDraft} setEditDraft={setEditDraft} onStartEdit={startEdit} onSaveEdit={saveEdit} onCancelEdit={() => setEditingItemId(null)} 
-                  onDeleteItem={deleteItem} onCopyItem={(i) => { addItemForm.reset({ itemName: i.item_name, price: i.price, quantity: i.quantity, note: i.note || '', ice: i.ice || '50%', sugar: i.sugar || '50%', order_batch_id: i.order_batch_id, pay_separate: !!i.pay_separate }); window.scrollTo({ top: 0, behavior: 'smooth' }) }} 
+                  onDeleteItem={deleteItem} onCopyItem={(i) => { addItemForm.reset({ itemName: i.itemName, price: i.price, quantity: i.quantity, note: i.note || '', ice: i.ice || '50%', sugar: i.sugar || '50%', orderBatchId: i.orderBatchId, paySeparate: !!i.paySeparate }); window.scrollTo({ top: 0, behavior: 'smooth' }) }} 
                   onTogglePaid={() => {}} isLoading={isLoading} PERCENT_OPTIONS={PERCENT_OPTIONS} 
                 />
               ))} 

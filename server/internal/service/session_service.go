@@ -185,6 +185,25 @@ func (s *sessionService) ListByIDs(ctx context.Context, ids []uuid.UUID) ([]doma
 	return s.repo.ListByIDs(ctx, ids)
 }
 
+func (s *sessionService) VerifyPassword(ctx context.Context, slug string, password string) (bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	session, err := s.repo.GetBySlug(ctx, slug)
+	if err != nil {
+		return false, err
+	}
+	if session == nil {
+		return false, fmt.Errorf("session not found")
+	}
+
+	if session.Password == nil || *session.Password == "" {
+		return true, nil // No password set
+	}
+
+	return *session.Password == password, nil
+}
+
 func (s *sessionService) CleanupOldSessions(ctx context.Context, days int) (int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()

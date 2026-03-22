@@ -60,14 +60,14 @@ export function ParticipantItem({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            {participant.is_host && <Crown className="w-3 h-3 text-amber-400" />}
+            {participant.isHost && <Crown className="w-3 h-3 text-amber-400" />}
             <span className="font-medium text-white text-sm">{participant.name}</span>
             {participant.id === myParticipantId && <span className="text-xs text-sky-400">(bạn)</span>}
           </div>
           <p className="text-xs text-white/40">{items.length} món · {formatVND(calcSubtotal(items))}</p>
         </div>
         <div className="flex items-center gap-2">
-          {participant.is_paid ? (
+          {participant.isPaid ? (
             <Badge 
               variant="paid" 
               className={`text-[10px] px-1.5 ${iAmHost && session.status !== 'open' ? 'cursor-pointer hover:bg-sky-500/30' : ''}`}

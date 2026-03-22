@@ -51,7 +51,7 @@ export function BatchCard({
   setBankAccountInput,
   onSaveGlobalBank
 }: BatchCardProps) {
-  const bItems = orderItems.filter(i => i.order_batch_id === batch.id)
+  const bItems = orderItems.filter(i => i.orderBatchId === batch.id)
   const bTotal = bItems.reduce((s, i) => s + i.price * i.quantity, 0)
   
   // Logic nguồn thanh toán: Đơn mặc định không có nguồn tham chiếu (nó là gốc)
@@ -62,14 +62,14 @@ export function BatchCard({
   // Props current values: 
   // - Đơn mặc định: dùng thông tin đồng bộ từ host session
   // - Đơn con: LUÔN dùng batch info riêng (để tab "Nhập mới" rỗng khi đang mượn đơn khác)
-  const propBankName = batch.is_default ? (session.host_default_bank_name || '') : (batch.bank_name || '')
-  const propBankAcc = batch.is_default ? (session.host_default_bank_account || '') : (batch.bank_account || '')
-  const qrPayload = batch.is_default ? session.host_default_qr_payload : batch.qr_payload
+  const propBankName = batch.isDefault ? (session.hostDefaultBankName || '') : (batch.bankName || '')
+  const propBankAcc = batch.isDefault ? (session.hostDefaultBankAccount || '') : (batch.bankAccount || '')
+  const qrPayload = batch.isDefault ? session.hostDefaultQrPayload : batch.qrPayload
 
   // Logic xác định tab nào đang active cho ĐƠN CON
   // Nếu đang mượn từ một đơn khác (có UUID hợp lệ) -> Tab DÙNG LẠI
   // Ngược lại -> Tab NHẬP MỚI
-  const isCustomTabActive = batch.is_default || currentSource === 'custom' || currentSource === 'none'
+  const isCustomTabActive = batch.isDefault || currentSource === 'custom' || currentSource === 'none'
 
   // --- LOCAL STATES ---
   const [localName, setLocalName] = React.useState(batch.name)
@@ -124,7 +124,7 @@ export function BatchCard({
                   onChange={e => setLocalName(e.target.value)}
                 />
               </div>
-              {batch.is_default && (
+              {batch.isDefault && (
                 <span className="px-1.5 py-0.5 rounded-md bg-emerald-500 text-black text-[10px] sm:text-[11px] font-black uppercase tracking-tighter shrink-0 shadow-lg">
                   DEF
                 </span>
@@ -139,7 +139,7 @@ export function BatchCard({
         </div>
 
         <div className="flex items-center">
-          {!batch.is_default && (
+          {!batch.isDefault && (
             <button 
               onClick={(e) => { e.stopPropagation(); onDeleteBatch(batch.id, batch.name) }}
               className="w-10 h-10 flex items-center justify-center text-white/10 hover:text-rose-500 transition-colors shrink-0"
@@ -163,12 +163,12 @@ export function BatchCard({
                   onClick={() => onUpdatePaymentSource(batch.id, 'custom')}
                   className={`flex-1 py-2 px-4 rounded-full text-[10px] font-black transition-all ${isCustomTabActive ? 'bg-sky-500 text-white shadow-lg' : 'text-white/30 hover:text-white/50'}`}
                 >
-                  {batch.is_default ? 'THÔNG TIN CHUNG' : 'NHẬP STK RIÊNG'}
+                  {batch.isDefault ? 'THÔNG TIN CHUNG' : 'NHẬP STK RIÊNG'}
                 </button>
-                {!batch.is_default && (
+                {!batch.isDefault && (
                   <button 
                     onClick={() => {
-                      const defB = orderBatches.find(b => b.is_default)
+                      const defB = orderBatches.find(b => b.isDefault)
                       if (defB) onUpdatePaymentSource(batch.id, defB.id)
                     }}
                     className={`flex-1 py-2 px-4 rounded-full text-[10px] font-black transition-all ${!isCustomTabActive ? 'bg-sky-500 text-white shadow-lg' : 'text-white/30 hover:text-white/50'}`}
@@ -190,7 +190,7 @@ export function BatchCard({
                             setLocalBankName(val)
                             lastSavedAcc.current = localBankAcc
                             lastSaveTime.current = Date.now()
-                            if (batch.is_default) {
+                            if (batch.isDefault) {
                               setBankNameInput(val)
                               onSaveGlobalBank(val, localBankAcc)
                             } else {
@@ -222,7 +222,7 @@ export function BatchCard({
                               if (localBankAcc !== propBankAcc) {
                                 lastSavedAcc.current = localBankAcc
                                 lastSaveTime.current = Date.now()
-                                if (batch.is_default) {
+                                if (batch.isDefault) {
                                   setBankAccountInput(localBankAcc)
                                   onSaveGlobalBank(localBankName, localBankAcc)
                                 } else {
@@ -237,7 +237,7 @@ export function BatchCard({
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[9px] font-black text-white/20 uppercase ml-1 text-center">Mã QR</label>
                       <button 
-                        onClick={() => onTriggerActionSheet(batch.is_default ? null : batch.id)}
+                        onClick={() => onTriggerActionSheet(batch.isDefault ? null : batch.id)}
                         className="flex-1 min-h-[90px] bg-black/40 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-1 hover:bg-white/5 transition-all text-white/20"
                       >
                         {qrPayload ? (
@@ -252,7 +252,7 @@ export function BatchCard({
                 </div>
               )}
 
-              {!isCustomTabActive && !batch.is_default && (
+              {!isCustomTabActive && !batch.isDefault && (
                 <div className="space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-white/20 uppercase ml-1">Chọn đợt đơn nguồn</label>
@@ -264,17 +264,17 @@ export function BatchCard({
                         {orderBatches
                           .filter(b => {
                             if (b.id === batch.id) return false // Không hiện chính nó
-                            if (b.is_default) return true // Đơn mặc định luôn là nguồn hợp lệ
+                            if (b.isDefault) return true // Đơn mặc định luôn là nguồn hợp lệ
                             
                             // Đơn con chỉ hiển thị nếu:
                             // 1. Đang ở chế độ "Nhập STK riêng" (custom)
-                            // 2. VÀ thực sự đã có dữ liệu (bank_account hoặc qr_payload)
+                            // 2. VÀ thực sự đã có dữ liệu (bankAccount hoặc qrPayload)
                             const bSource = paymentSources[b.id]
-                            return bSource === 'custom' && (b.bank_account || b.qr_payload)
+                            return bSource === 'custom' && (b.bankAccount || b.qrPayload)
                           })
                           .map(b => (
                             <SelectItem key={b.id} value={b.id} className="text-xs">
-                              Dùng chung với {b.name} {b.is_default ? '(Mặc định)' : ''}
+                              Dùng chung with {b.name} {b.isDefault ? '(Mặc định)' : ''}
                             </SelectItem>
                           ))
                         }
@@ -288,12 +288,12 @@ export function BatchCard({
                         <LinkIcon className="w-5 h-5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-black text-emerald-400 uppercase">Liên kết với {sourceBatch.name}</p>
+                        <p className="text-[10px] font-black text-emerald-400 uppercase">Liên kết with {sourceBatch.name}</p>
                         <p className="text-xs text-white/60 font-bold truncate">
-                          {sourceBatch.bank_name ? (BANK_OPTIONS.find((bk: any) => bk.code === sourceBatch.bank_name)?.shortName || sourceBatch.bank_name) : ''}: {sourceBatch.bank_account || 'Chưa có STK'}
+                          {sourceBatch.bankName ? (BANK_OPTIONS.find((bk: any) => bk.code === sourceBatch.bankName)?.shortName || sourceBatch.bankName) : ''}: {sourceBatch.bankAccount || 'Chưa có STK'}
                         </p>
                       </div>
-                      {sourceBatch.qr_payload && <QrCode className="w-4 h-4 text-emerald-400/40" />}
+                      {sourceBatch.qrPayload && <QrCode className="w-4 h-4 text-emerald-400/40" />}
                     </Card>
                   )}
                 </div>

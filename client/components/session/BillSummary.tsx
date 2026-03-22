@@ -16,9 +16,9 @@ interface BillSummaryProps {
 
 export function BillSummary({ entries, session, batches = [] }: BillSummaryProps) {
   const grandTotal = entries.reduce((s, e) => s + e.total, 0)
-  const configs = (session.batch_configs as Record<string, any>) || {}
+  const configs = (session.batchConfigs as Record<string, any>) || {}
 
-  if (!session.is_split_batch) {
+  if (!session.isSplitBatch) {
     return (
       <Card className="overflow-hidden border-sky-500/10 shadow-2xl bg-[#0a0a0c]">
         <CardHeader className="pb-3 border-b border-white/5 bg-white/[0.02]">
@@ -37,9 +37,9 @@ export function BillSummary({ entries, session, batches = [] }: BillSummaryProps
                   <div className="px-5 py-4 flex flex-col gap-3">
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-2">
-                        {entry.participant.is_host && <Crown className="w-3.5 h-3.5 text-amber-400" />}
+                        {entry.participant.isHost && <Crown className="w-3.5 h-3.5 text-amber-400" />}
                         <span className="font-bold text-white text-[13px]">{entry.participant.name}</span>
-                        {entry.participant.is_paid ? (
+                        {entry.participant.isPaid ? (
                           <Badge variant="paid" className="text-[9px] px-1.5 py-0">Đã trả</Badge>
                         ) : (
                           session.status !== 'open' && <Badge variant="unpaid" className="text-[9px] px-1.5 py-0">Chưa trả</Badge>
@@ -83,7 +83,7 @@ export function BillSummary({ entries, session, batches = [] }: BillSummaryProps
   }
 
   const allItems = entries.flatMap(e => e.items)
-  const batchIds = Array.from(new Set(allItems.map(ib => ib.item.order_batch_id || 'default')))
+  const batchIds = Array.from(new Set(allItems.map(ib => ib.item.orderBatchId || 'default')))
 
   return (
     <Card className="overflow-hidden border-sky-500/10 shadow-2xl bg-[#0a0a0c]">
@@ -96,10 +96,10 @@ export function BillSummary({ entries, session, batches = [] }: BillSummaryProps
         {batchIds.map((batchId) => {
           const bObj = batches?.find(bt => bt.id === batchId)
           const bName = bObj?.name || 'Đơn 1'
-          const bItems = allItems.filter(ib => (ib.item.order_batch_id || 'default') === batchId)
+          const bItems = allItems.filter(ib => (ib.item.orderBatchId || 'default') === batchId)
           const bTotal = bItems.reduce((s, i) => s + i.total, 0)
           const bSub = bItems.reduce((s, i) => s + i.subtotal, 0)
-          const pIds = Array.from(new Set(bItems.map(i => i.item.participant_id)))
+          const pIds = Array.from(new Set(bItems.map(i => i.item.participantId)))
           const cfg = configs[bName] || { type: 'amount', value: 0, ship: 0 }
           const bDV = Number(cfg.value) || 0
           const bSF = Number(cfg.ship) || 0
@@ -142,7 +142,7 @@ export function BillSummary({ entries, session, batches = [] }: BillSummaryProps
                 {pIds.map(pId => {
                   const entry = entries.find(e => e.participant.id === pId)
                   if (!entry) return null
-                  const pBItems = bItems.filter(ib => ib.item.participant_id === pId)
+                  const pBItems = bItems.filter(ib => ib.item.participantId === pId)
                   const pBT = pBItems.reduce((s, i) => s + i.total, 0)
                   const pBS = pBItems.reduce((s, i) => s + i.subtotal, 0)
                   const pAdj = pBT - pBS
@@ -151,9 +151,9 @@ export function BillSummary({ entries, session, batches = [] }: BillSummaryProps
                       <div className="px-5 py-4 flex flex-col gap-3">
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-2">
-                            {entry.participant.is_host && <Crown className="w-3.5 h-3.5 text-amber-400" />}
+                            {entry.participant.isHost && <Crown className="w-3.5 h-3.5 text-amber-400" />}
                             <span className="font-bold text-white text-[13px] leading-tight">{entry.participant.name}</span>
-                            {entry.participant.is_paid ? (
+                            {entry.participant.isPaid ? (
                               <Badge variant="paid" className="text-[9px] px-1.5 py-0">Đã trả</Badge>
                             ) : (
                               session.status !== 'open' && <Badge variant="unpaid" className="text-[9px] px-1.5 py-0">Chưa trả</Badge>

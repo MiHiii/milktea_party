@@ -22,6 +22,7 @@ func (r *Router) Register(engine *gin.Engine) {
 			sessions.GET("/batch", r.Session.ListByBatch)
 			sessions.GET("/:id", r.Session.GetByID)
 			sessions.GET("/slug/:slug", r.Session.GetBySlug)
+			sessions.POST("/slug/:slug/verify", r.Session.VerifyPassword)
 			sessions.PUT("/:id", r.Session.Update)
 			sessions.DELETE("/:id", r.Session.Delete)
 		}

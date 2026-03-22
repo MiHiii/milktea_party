@@ -67,20 +67,20 @@ export function SessionConfig({
           </label>
         </Card>
 
-        <Card className={`p-4 rounded-3xl flex items-center justify-between border-white/10 transition-all ${session.has_password ? 'bg-sky-500/5 ring-1 ring-sky-500/20' : 'bg-white/5'}`}>
+        <Card className={`p-4 rounded-3xl flex items-center justify-between border-white/10 transition-all ${session.hasPassword ? 'bg-sky-500/5 ring-1 ring-sky-500/20' : 'bg-white/5'}`}>
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-colors ${session.has_password ? 'bg-sky-500/20 text-sky-400' : 'bg-white/5 text-white/20'}`}>
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-colors ${session.hasPassword ? 'bg-sky-500/20 text-sky-400' : 'bg-white/5 text-white/20'}`}>
               <Lock className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-bold">Mật khẩu Host</span>
-              <span className="text-[10px] text-white/30 font-bold uppercase">{session.has_password ? 'Đã khoá' : 'Công khai'}</span>
+              <span className="text-[10px] text-white/30 font-bold uppercase">{session.hasPassword ? 'Đã khoá' : 'Công khai'}</span>
             </div>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" className="sr-only peer" checked={!!session.has_password || showPasswordEdit} onChange={(e) => onTogglePassword(e.target.checked)} />
+            <input type="checkbox" className="sr-only peer" checked={!!session.hasPassword || showPasswordEdit} onChange={(e) => onTogglePassword(e.target.checked)} />
             <div className="w-11 h-6 bg-white/10 rounded-full peer peer-checked:bg-sky-500 transition-colors relative">
-              <div className={`absolute top-[3px] left-[3px] bg-white rounded-full h-4.5 w-4.5 transition-all shadow-lg ${!!session.has_password || showPasswordEdit ? 'translate-x-[20px]' : ''}`} />
+              <div className={`absolute top-[3px] left-[3px] bg-white rounded-full h-4.5 w-4.5 transition-all shadow-lg ${!!session.hasPassword || showPasswordEdit ? 'translate-x-[20px]' : ''}`} />
             </div>
           </label>
         </Card>

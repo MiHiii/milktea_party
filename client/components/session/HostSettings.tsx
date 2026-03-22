@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
+import { api } from '@/lib/api'
 
 // Import Sub-components
 import { SessionConfig } from './host/SessionConfig'
@@ -97,13 +98,13 @@ export function HostSettings({
   BANK_OPTIONS
 }: HostSettingsProps) {
   const [expandedBatchId, setExpandedBatchId] = React.useState<string | null>(null)
-  const hasSubOrders = session.is_split_batch
+  const hasSubOrders = session.isSplitBatch
 
   const originalTotal = orderItems.reduce((s, i) => s + i.price * i.quantity, 0)
-  const discountVal = session.discount_type === 'percent' 
-    ? (originalTotal * (session.discount_value || 0)) / 100 
-    : (session.discount_value || 0)
-  const shippingFee = session.shipping_fee || 0
+  const discountVal = session.discountType === 'percent' 
+    ? (originalTotal * (session.discountValue || 0)) / 100 
+    : (session.discountValue || 0)
+  const shippingFee = session.shippingFee || 0
   const estimatedPayable = Math.max(0, originalTotal - discountVal + shippingFee)
 
   React.useEffect(() => {
@@ -112,25 +113,25 @@ export function HostSettings({
     }
   }, [open, estimatedPayable])
 
-  const paymentSources = (session.batch_configs as any)?.paymentSources || {}
+  const paymentSources = (session.batchConfigs as any)?.paymentSources || {}
   
   const onUpdatePaymentSource = async (batchId: string, source: string) => {
     // 1. Xác định dữ liệu nguồn mới để Snapshot
-    let sourceData = { bank_name: '', bank_account: '', qr_payload: '' }
+    let sourceData = { bankName: '', bankAccount: '', qrPayload: '' }
     
     if (source === 'host') {
       sourceData = {
-        bank_name: session.host_default_bank_name || '',
-        bank_account: session.host_default_bank_account || '',
-        qr_payload: session.host_default_qr_payload || ''
+        bankName: session.hostDefaultBankName || '',
+        bankAccount: session.hostDefaultBankAccount || '',
+        qrPayload: session.hostDefaultQrPayload || ''
       }
     } else if (source !== 'custom') {
       const sb = orderBatches.find(b => b.id === source)
       if (sb) {
         sourceData = {
-          bank_name: sb.bank_name || '',
-          bank_account: sb.bank_account || '',
-          qr_payload: sb.qr_payload || ''
+          bankName: sb.bankName || '',
+          bankAccount: sb.bankAccount || '',
+          qrPayload: sb.qrPayload || ''
         }
       }
     }
@@ -138,15 +139,10 @@ export function HostSettings({
     // 2. Cập nhật Snapshot cho chính đơn mục tiêu (batchId)
     if (source !== 'custom') {
       try {
-        await fetch(`/api/order-batches/${batchId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            hostDeviceId: session.host_device_id,
-            bankName: sourceData.bank_name,
-            bankAccount: sourceData.bank_account,
-            qrPayload: sourceData.qr_payload
-          })
+        await api.orderBatches.update(batchId, { 
+          bankName: sourceData.bankName,
+          bankAccount: sourceData.bankAccount,
+          qrPayload: sourceData.qrPayload
         })
       } catch (e) { console.error('Snapshot failed:', e) }
     }
@@ -170,28 +166,18 @@ export function HostSettings({
     // 4. Đồng bộ DB cho các đơn bị ảnh hưởng bởi việc làm phẳng
     if (affectedBatchIds.length > 0 && source !== 'custom') {
       await Promise.all(affectedBatchIds.map(id => 
-        fetch(`/api/order-batches/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            hostDeviceId: session.host_device_id,
-            bankName: sourceData.bank_name,
-            bankAccount: sourceData.bank_account,
-            qrPayload: sourceData.qr_payload
-          })
+        api.orderBatches.update(id, { 
+          bankName: sourceData.bankName,
+          bankAccount: sourceData.bankAccount,
+          qrPayload: sourceData.qrPayload
         })
       ));
     }
 
-    const newConfigs = { ...(session.batch_configs as any || {}), paymentSources: newSources }
+    const newConfigs = { ...(session.batchConfigs as any || {}), paymentSources: newSources }
     try {
-      await fetch(`/api/sessions/${session.slug}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          hostDeviceId: session.host_device_id,
-          batchConfigs: newConfigs 
-        })
+      await api.sessions.update(session.id, { 
+        batchConfigs: newConfigs 
       })
     } catch (e) { console.error(e) }
   }

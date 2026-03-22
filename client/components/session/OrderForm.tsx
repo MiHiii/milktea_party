@@ -128,14 +128,14 @@ export function OrderForm({
         </div>
 
         {/* CHIA ĐƠN */}
-        {session.is_split_batch && (
+        {session.isSplitBatch && (
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] text-emerald-500/60 font-black uppercase ml-1 tracking-[0.15em]">CHIA ĐƠN</label>
             <div className="relative w-full">
               <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500/40 z-10" />
               <select 
                 className="w-full bg-emerald-500/5 border border-emerald-500/20 rounded-xl pl-10 pr-10 h-11 text-base text-emerald-400 font-bold appearance-none focus:outline-none focus:border-emerald-500/40 transition-all" 
-                {...register('order_batch_id')}
+                {...register('orderBatchId')}
               >
                 {orderBatches.map(b => (
                   <option key={b.id} value={b.id} className="bg-slate-900 text-white">{b.name}</option>
@@ -150,13 +150,13 @@ export function OrderForm({
         <div className="flex items-center justify-between px-1 mt-1">
           <div className="flex items-center gap-3">
             <label className="relative flex items-center justify-center cursor-pointer group">
-              <input type="checkbox" {...register('pay_separate')} className="peer sr-only" />
+              <input type="checkbox" {...register('paySeparate')} className="peer sr-only" />
               <div className="w-6 h-6 rounded-full border-2 border-white/10 flex items-center justify-center transition-all peer-checked:bg-sky-500 peer-checked:border-sky-500 peer-checked:scale-110 active:scale-90">
                 <Check className="w-4 h-4 text-white scale-0 transition-transform peer-checked:scale-100" />
               </div>
             </label>
             <span 
-              onClick={() => setValue('pay_separate', !watch('pay_separate'))} 
+              onClick={() => setValue('paySeparate', !watch('paySeparate'))} 
               className="text-xs text-white/50 cursor-pointer select-none font-medium hover:text-white/70 transition-colors"
             >
               Tạo mã QR thanh toán riêng cho món này

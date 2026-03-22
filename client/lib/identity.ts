@@ -1,6 +1,6 @@
-// Identity Management - localStorage-based p_id per session
+// Identity Management - localStorage-based pId per session
 
-const DEVICE_ID_KEY = 'milktea_device_id'
+const DEVICE_ID_KEY = 'milkteaDeviceId'
 
 export function getOrCreateDeviceId(): string {
   if (typeof window === 'undefined') return ''
@@ -25,19 +25,19 @@ export function getOrCreateDeviceId(): string {
 
 export function getParticipantId(sessionId: string): string | null {
   if (typeof window === 'undefined') return null
-  const id = localStorage.getItem(`p_id_${sessionId}`)
+  const id = localStorage.getItem(`pId_${sessionId}`)
   if (id === 'undefined' || id === 'null' || !id) return null
   return id
 }
 
 export function setParticipantId(sessionId: string, participantId: string): void {
   if (typeof window === 'undefined') return
-  localStorage.setItem(`p_id_${sessionId}`, participantId)
+  localStorage.setItem(`pId_${sessionId}`, participantId)
 }
 
 export function clearParticipantId(sessionId: string): void {
   if (typeof window === 'undefined') return
-  localStorage.removeItem(`p_id_${sessionId}`)
+  localStorage.removeItem(`pId_${sessionId}`)
 }
 
 export function isHost(hostDeviceId: string): boolean {

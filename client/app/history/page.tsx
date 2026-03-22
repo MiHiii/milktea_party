@@ -28,8 +28,8 @@ export default function HistoryPage() {
         const hostSessions = await api.sessions.listByHost(deviceId)
 
         // Find sessions where the user was a participant (via localStorage keys)
-        const participationKeys = Object.keys(localStorage).filter(k => k.startsWith('p_id_'))
-        const sessionIds = participationKeys.map(k => k.replace('p_id_', ''))
+        const participationKeys = Object.keys(localStorage).filter(k => k.startsWith('pId_'))
+        const sessionIds = participationKeys.map(k => k.replace('pId_', ''))
 
         let participantSessions: Session[] = []
         if (sessionIds.length > 0) {
@@ -45,7 +45,7 @@ export default function HistoryPage() {
           return true
         })
 
-        unique.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        unique.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         setSessions(unique)
       } catch (e) {
         console.error('Failed to fetch history', e)
@@ -98,7 +98,7 @@ export default function HistoryPage() {
 
         {!loading && sessions.map((session) => {
           const deviceId = getOrCreateDeviceId()
-          const isHost = session.host_device_id === deviceId
+          const isHost = session.hostDeviceId === deviceId
           const myPid = getParticipantId(session.id)
 
           return (
@@ -116,7 +116,7 @@ export default function HistoryPage() {
                 <CardContent className="pt-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 text-xs text-white/40">
-                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDate(session.created_at)}</span>
+                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDate(session.createdAt)}</span>
                       <span className="flex items-center gap-1"><Users className="w-3 h-3" />/{session.slug}</span>
                     </div>
                     <ArrowRight className="w-4 h-4 text-white/30 group-hover:text-sky-400 transition-colors" />

@@ -44,8 +44,8 @@ function QrCard({ entry, session, batches = [], copyToClipboard }: QrCardProps) 
     document.body.removeChild(a)
   }
 
-  const forcedSeparateItems = entry.items.filter(ib => !!ib.item.pay_separate)
-  const normalItems = entry.items.filter(ib => !ib.item.pay_separate)
+  const forcedSeparateItems = entry.items.filter(ib => !!ib.item.paySeparate)
+  const normalItems = entry.items.filter(ib => !ib.item.paySeparate)
 
   return (
     <Card className="overflow-hidden border-white/5 bg-white/5 shadow-xl transition-all mb-3 last:mb-0">
@@ -69,19 +69,19 @@ function QrCard({ entry, session, batches = [], copyToClipboard }: QrCardProps) 
         {isSeparate ? (
           <div className="flex flex-col gap-3">
             {entry.items.map((ib, idx) => {
-              const batch = batches.find(b => b.id === ib.item.order_batch_id)
+              const batch = batches.find(b => b.id === ib.item.orderBatchId)
               const qrInfo = getPaymentQR(session, batch)
-              const itemQrUrl = qrInfo.bankName && qrInfo.bankAccount ? buildQrUrl(qrInfo.bankName, qrInfo.bankAccount, ib.total, `${entry.participant.name} - ${ib.item.item_name}`) : null
+              const itemQrUrl = qrInfo.bankName && qrInfo.bankAccount ? buildQrUrl(qrInfo.bankName, qrInfo.bankAccount, ib.total, `${entry.participant.name} - ${ib.item.itemName}`) : null
               return (
                 <div key={ib.item.id} className="flex items-center gap-4 bg-white/5 p-3 rounded-xl border border-white/5">
                   {itemQrUrl && (
                     <div className="relative group shrink-0">
                       <div className="p-1.5 bg-white rounded-lg w-[100px] h-[100px]"><img src={itemQrUrl} alt="QR" className="w-full h-full mix-blend-multiply" /></div>
-                      <button onClick={() => saveImage(itemQrUrl, `_${ib.item.item_name}`)} className="absolute -top-1 -right-1 p-1.5 bg-sky-500 text-white rounded-full shadow-lg scale-0 group-hover:scale-100 transition-transform"><Save className="w-3 h-3" /></button>
+                      <button onClick={() => saveImage(itemQrUrl, `_${ib.item.itemName}`)} className="absolute -top-1 -right-1 p-1.5 bg-sky-500 text-white rounded-full shadow-lg scale-0 group-hover:scale-100 transition-transform"><Save className="w-3 h-3" /></button>
                     </div>
                   )}
                   <div className="flex-1 min-w-0 flex flex-col justify-between h-[100px] py-1">
-                    <div><p className="text-[9px] text-emerald-400 font-black uppercase tracking-widest mb-0.5">Món {idx + 1}</p><h4 className="text-white font-bold text-xs truncate leading-tight">{ib.item.item_name}</h4></div>
+                    <div><p className="text-[9px] text-emerald-400 font-black uppercase tracking-widest mb-0.5">Món {idx + 1}</p><h4 className="text-white font-bold text-xs truncate leading-tight">{ib.item.itemName}</h4></div>
                     <div className="flex flex-col gap-2">
                       <p className="text-sky-400 font-black text-sm tabular-nums">{formatVND(ib.total)}</p>
                       <div className="flex gap-1.5"><button onClick={() => copyAmount(ib.total, ib.item.id)} className={`p-1.5 rounded-lg border flex-1 transition-all flex items-center justify-center gap-1.5 text-[10px] font-bold ${copiedAmount === ib.item.id ? 'bg-emerald-500' : 'text-white/40'}`}>{copiedAmount === ib.item.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}Tiền</button><button onClick={() => copyBank(qrInfo.bankAccount)} className={`p-1.5 rounded-lg border flex-1 transition-all flex items-center justify-center gap-1.5 text-[10px] font-bold ${copiedBank ? 'bg-emerald-500' : 'text-white/40'}`}>{copiedBank ? <Check className="w-3 h-3" /> : <Hash className="w-3 h-3" />}STK</button></div>
@@ -94,7 +94,7 @@ function QrCard({ entry, session, batches = [], copyToClipboard }: QrCardProps) 
         ) : (
           <div className="flex flex-col gap-4">
             {normalItems.length > 0 && (() => {
-              const b = batches.find(bt => bt.id === normalItems[0].item.order_batch_id)
+              const b = batches.find(bt => bt.id === normalItems[0].item.orderBatchId)
               const qrInfo = getPaymentQR(session, b)
               const gT = normalItems.reduce((s, i) => s + i.total, 0)
               const tQr = qrInfo.bankName && qrInfo.bankAccount ? buildQrUrl(qrInfo.bankName, qrInfo.bankAccount, gT, `${entry.participant.name} - ${session.title}`) : null
@@ -109,13 +109,13 @@ function QrCard({ entry, session, batches = [], copyToClipboard }: QrCardProps) 
               )
             })()}
             {forcedSeparateItems.map((ib) => {
-              const b = batches.find(bt => bt.id === ib.item.order_batch_id)
+              const b = batches.find(bt => bt.id === ib.item.orderBatchId)
               const qrInfo = getPaymentQR(session, b)
-              const iQr = qrInfo.bankName && qrInfo.bankAccount ? buildQrUrl(qrInfo.bankName, qrInfo.bankAccount, ib.total, `${entry.participant.name} - ${ib.item.item_name}`) : null
+              const iQr = qrInfo.bankName && qrInfo.bankAccount ? buildQrUrl(qrInfo.bankName, qrInfo.bankAccount, ib.total, `${entry.participant.name} - ${ib.item.itemName}`) : null
               return (
                 <div key={ib.item.id} className="flex items-center gap-3 bg-sky-500/[0.03] p-2.5 rounded-xl border border-sky-500/10">
                   {iQr && (<div className="p-1 bg-white rounded-md w-[60px] h-[60px] shrink-0"><img src={iQr} alt="QR" className="w-full h-full mix-blend-multiply" /></div>)}
-                  <div className="flex-1 min-w-0"><h4 className="text-[11px] text-white/70 font-bold truncate">{ib.item.item_name}</h4><p className="text-sky-400 font-bold text-xs tabular-nums mt-0.5">{formatVND(ib.total)}</p></div>
+                  <div className="flex-1 min-w-0"><h4 className="text-[11px] text-white/70 font-bold truncate">{ib.item.itemName}</h4><p className="text-sky-400 font-bold text-xs tabular-nums mt-0.5">{formatVND(ib.total)}</p></div>
                   <div className="flex gap-1"><button onClick={() => copyAmount(ib.total, ib.item.id)} className="p-2 rounded-lg bg-white/5 text-white/20 hover:text-sky-400 transition-colors shrink-0">{copiedAmount === ib.item.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}</button><button onClick={() => copyBank(qrInfo.bankAccount)} className="p-2 rounded-lg bg-white/5 text-white/20 hover:text-sky-400 transition-colors shrink-0">{copiedBank ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Hash className="w-3.5 h-3.5" />}</button></div>
                 </div>
               )

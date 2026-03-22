@@ -47,10 +47,9 @@ export default function HomePage() {
       const deviceId = getOrCreateDeviceId()
 
       const res = await api.sessions.create({
-        slug: generateSlug(),
         title: data.title,
         shopLink: data.shopLink || null,
-        host_device_id: deviceId,
+        hostDeviceId: deviceId,
         hostName: data.hostName,
         password: showPassword && data.sessionPassword ? data.sessionPassword : null,
       })

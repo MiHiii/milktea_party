@@ -15,6 +15,7 @@ type SessionService interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	ListByHost(ctx context.Context, hostDeviceID uuid.UUID) ([]domain.Session, error)
 	ListByIDs(ctx context.Context, ids []uuid.UUID) ([]domain.Session, error)
+	VerifyPassword(ctx context.Context, slug string, password string) (bool, error)
 	CleanupOldSessions(ctx context.Context, days int) (int64, error)
 }
 
