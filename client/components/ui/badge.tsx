@@ -9,7 +9,11 @@ const badgeVariants = cva(
       variant: {
         open: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
         locked: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
-        paid: 'bg-sky-500/20 text-sky-400 border border-sky-500/30',
+        ordered: 'bg-orange-500/20 text-orange-400 border border-orange-500/30',
+        settling: 'bg-sky-500/20 text-sky-400 border border-sky-500/30',
+        completed: 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30',
+        cancelled: 'bg-rose-500/20 text-rose-400 border border-rose-500/30',
+        paid: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
         unpaid: 'bg-rose-500/20 text-rose-400 border border-rose-500/30',
         default: 'bg-white/10 text-white/70 border border-white/20',
         host: 'bg-sky-500/30 text-sky-300 border border-sky-500/40',

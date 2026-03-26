@@ -23,8 +23,8 @@
 | **REQ-001** | REQ-001 | S1 | State Machine (6 trạng thái Session) | 🏗️ | ⏳ | 🏗️ | `IN_PROGRESS` | Cần validation & Pessimistic Lock |
 | **REQ-002** | REQ-002 | S1 | DeviceID Identity & Heartbeat | ✅ | ✅ | 🏗️ | `IN_REVIEW` | Đang chờ QC Audit |
 | **REQ-003** | REQ-003 | S1 | OrderBatch & Grouping Logic | ✅ | ⏳ | 🏗️ | `IN_TESTING` | Chờ Tester chạy E2E |
-| **REQ-004** | REQ-004 | S2 | Math: Rounding 1k & Residuals | ⏳ | ⏳ | 🏗️ | `BACKLOG` | |
-| **REQ-005** | REQ-005 | S1 | Real-time Sync (WebSocket) | ✅ | 🏗️ | 🏗️ | `IN_PROGRESS` | Đồng bộ trạng thái phòng |
+| **REQ-004** | REQ-004 | S1 | Math: Rounding 1k & Residuals | ⏳ | ⏳ | 🏗️ | `IN_ANALYSIS` | **High Priority** - Cần BA spec |
+| **REQ-005** | REQ-005 | S1 | Real-time Sync (WebSocket) | ✅ | 🏗️ | 🏗️ | `IN_PROGRESS` | Cần cơ chế Re-sync khi mất WS |
 | **REQ-009** | REQ-009 | S1 | Session Password Protection | 🏗️ | ⏳ | 🏗️ | `IN_PROGRESS` | Cần chuyển sang bcrypt |
 
 ---
@@ -34,8 +34,9 @@
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **FEAT-001** | — | S0 | UI: Host Dashboard | ✅ | ✅ | ✅ | `DONE` | Core Dashboard hoàn tất |
 | **FEAT-002** | — | S1 | UI: Guest Order Form | ✅ | ⏳ | 🏗️ | `IN_TESTING` | Chờ E2E verification |
-| **FEAT-011** | REQ-002 | S1 | UI: Participant Online Status | 🏗️ | ⏳ | 🏗️ | `IN_PROGRESS` | Dot xanh/đỏ trạng thái |
-| **FEAT-012** | REQ-001 | S1 | UI: Dynamic Action Buttons | 🏗️ | ⏳ | 🏗️ | `IN_PROGRESS` | Ẩn/hiện nút theo status |
+| **FEAT-011** | REQ-002 | S1 | UI: Participant Online Status | 🏗️ | ⏳ | 🏗️ | `IN_PROGRESS` | **High Priority** - Dot xanh/đỏ |
+| **FEAT-012** | REQ-001 | S1 | UI: Dynamic Action Buttons | ✅ | ✅ | ✅ | `DONE` | Ẩn/hiện nút theo status |
+| **FEAT-013** | — | S1 | UI Hardening: Price Freeze & Sync | ⏳ | ⏳ | 🏗️ | `BACKLOG` | Khóa giá lúc SETTLING, báo mất mạng |
 
 ---
 

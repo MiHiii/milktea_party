@@ -23,7 +23,7 @@ export function BillSummary({ entries, session, batches = [] }: BillSummaryProps
       <Card className="overflow-hidden border-sky-500/10 shadow-2xl bg-[#0a0a0c]">
         <CardHeader className="pb-3 border-b border-white/5 bg-white/[0.02]">
           <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-sky-400">
-            <Receipt className="w-4 h-4" />Tổng kết đơn hàng
+            <Receipt className="w-4 h-4" />{['settling', 'completed'].includes(session.status) ? 'Bảng tính tiền chính thức' : 'Tổng kết đơn hàng (tạm tính)'}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -89,7 +89,7 @@ export function BillSummary({ entries, session, batches = [] }: BillSummaryProps
     <Card className="overflow-hidden border-sky-500/10 shadow-2xl bg-[#0a0a0c]">
       <CardHeader className="pb-3 border-b border-white/5 bg-white/[0.02]">
         <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-sky-400">
-          <Receipt className="w-4 h-4" />Tổng kết đơn hàng
+          <Receipt className="w-4 h-4" />{['settling', 'completed'].includes(session.status) ? 'Bảng tính tiền chính thức' : 'Tổng kết đơn hàng (tạm tính)'}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
