@@ -15,7 +15,7 @@ export interface OrderBatch {
   bankName: string | null
   bankAccount: string | null
   qrPayload: string | null
-  status: 'open' | 'locked' | 'paid'
+  status: 'open' | 'locked' | 'ordered' | 'settling' | 'completed' | 'cancelled' | 'paid'
   isDefault: boolean
   sortOrder: number
   createdAt: string
@@ -31,7 +31,7 @@ export interface Session {
   hostDefaultBankName: string | null
   hostDefaultBankAccount: string | null
   hostDefaultQrPayload: string | null
-  status: 'open' | 'locked' | 'paid'
+  status: 'open' | 'locked' | 'ordered' | 'settling' | 'completed' | 'cancelled'
   discountType: 'amount' | 'percent'
   discountValue: number
   shippingFee: number

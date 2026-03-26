@@ -51,7 +51,8 @@ export function OrderItem({
   isLoading,
   PERCENT_OPTIONS
 }: OrderItemProps) {
-  const canEditItem = (iAmHost || item.participantId === myParticipantId) && session.status === 'open'
+  const canEditItem = (iAmHost && ['open', 'locked', 'ordered'].includes(session.status)) || 
+                   (item.participantId === myParticipantId && session.status === 'open')
 
   if (isEditing) {
     return (
