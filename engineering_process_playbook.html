@@ -1,0 +1,1014 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --navy: #0f172a;
+    --navy2: #1e293b;
+    --navy3: #334155;
+    --slate: #64748b;
+    --muted: #94a3b8;
+    --line: #e2e8f0;
+    --accent: #6366f1;
+    --accent2: #8b5cf6;
+    --green: #10b981;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --cyan: #06b6d4;
+    --surface: #f8fafc;
+    --card: #ffffff;
+    --text: #0f172a;
+    --sub: #475569;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface: #0f172a;
+      --card: #1e293b;
+      --text: #f1f5f9;
+      --sub: #94a3b8;
+      --line: #334155;
+      --navy: #f1f5f9;
+      --navy2: #e2e8f0;
+      --navy3: #cbd5e1;
+    }
+  }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .shell {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 0 60px;
+  }
+
+  /* Header */
+  .hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+    padding: 48px 40px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .hero-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: #818cf8;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .hero h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #f1f5f9;
+    line-height: 1.2;
+    margin-bottom: 10px;
+  }
+  .hero h1 span { color: #818cf8; }
+  .hero-sub {
+    font-size: 13px;
+    color: #94a3b8;
+    max-width: 560px;
+  }
+  .hero-badges {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+  }
+  .badge-indigo { background: rgba(99,102,241,0.2); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); }
+  .badge-green  { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.25); }
+  .badge-amber  { background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.25); }
+  .badge-cyan   { background: rgba(6,182,212,0.15);  color: #67e8f9; border: 1px solid rgba(6,182,212,0.25); }
+
+  /* Nav tabs */
+  .nav {
+    display: flex;
+    gap: 2px;
+    padding: 16px 40px 0;
+    background: #1e293b;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-tab {
+    font-size: 12px;
+    font-weight: 500;
+    color: #64748b;
+    padding: 8px 16px 10px;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    border: none;
+    background: transparent;
+    font-family: 'Sora', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .nav-tab:hover { color: #cbd5e1; background: rgba(255,255,255,0.04); }
+  .nav-tab.active {
+    color: #f1f5f9;
+    background: var(--surface);
+    font-weight: 600;
+  }
+  .nav-tab .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  /* Content area */
+  .content {
+    padding: 32px 40px;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Section header */
+  .sec-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .sec-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .sec-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .sec-desc { font-size: 13px; color: var(--sub); }
+
+  /* Process blocks */
+  .phase-grid {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .phase-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .phase-header {
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .phase-header:hover { background: rgba(0,0,0,0.02); }
+  @media (prefers-color-scheme: dark) {
+    .phase-header:hover { background: rgba(255,255,255,0.03); }
+  }
+
+  .phase-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: #fff;
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .phase-name { font-size: 14px; font-weight: 600; flex: 1; color: var(--text); }
+  .phase-meta { font-size: 11px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
+  .phase-chevron {
+    font-size: 12px; color: var(--muted);
+    transition: transform 0.2s;
+  }
+  .phase-card.open .phase-chevron { transform: rotate(90deg); }
+
+  .phase-body {
+    display: none;
+    padding: 0 20px 20px;
+    border-top: 1px solid var(--line);
+  }
+  .phase-card.open .phase-body { display: block; }
+
+  .steps-list {
+    list-style: none;
+    margin-top: 16px;
+  }
+  .steps-list li {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--sub);
+    line-height: 1.5;
+  }
+  .steps-list li:last-child { border-bottom: none; }
+  .step-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    min-width: 20px;
+    padding-top: 2px;
+  }
+  .step-content strong { color: var(--text); font-weight: 600; display: block; margin-bottom: 2px; }
+  .step-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .tag-owner { background: rgba(99,102,241,0.1); color: #818cf8; }
+  .tag-tool  { background: rgba(6,182,212,0.1); color: #22d3ee; }
+  .tag-sla   { background: rgba(245,158,11,0.1); color: #f59e0b; }
+  .tag-must  { background: rgba(239,68,68,0.1); color: #f87171; }
+  .tag-good  { background: rgba(16,185,129,0.1); color: #34d399; }
+
+  /* RACI Table */
+  .raci-wrap { overflow-x: auto; margin-top: 16px; }
+  .raci-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    min-width: 600px;
+  }
+  .raci-table th {
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .raci-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    color: var(--sub);
+    vertical-align: top;
+  }
+  .raci-table tr:last-child td { border-bottom: none; }
+  .raci-table td:first-child { font-weight: 500; color: var(--text); }
+  .raci-pill {
+    display: inline-block;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 22px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .raci-R { background: rgba(239,68,68,0.15); color: #f87171; }
+  .raci-A { background: rgba(245,158,11,0.15); color: #fbbf24; }
+  .raci-C { background: rgba(99,102,241,0.15); color: #818cf8; }
+  .raci-I { background: rgba(100,116,139,0.12); color: #94a3b8; }
+
+  /* KPI / metrics cards */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .kpi-label { font-size: 11px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 6px; }
+  .kpi-value { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1; margin-bottom: 4px; }
+  .kpi-desc { font-size: 11px; color: var(--sub); }
+
+  /* Timeline visual */
+  .sprint-timeline {
+    position: relative;
+    margin-top: 20px;
+    padding-left: 24px;
+  }
+  .sprint-timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--line);
+  }
+  .tl-item {
+    position: relative;
+    margin-bottom: 20px;
+    padding-left: 20px;
+  }
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -20px; top: 6px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    background: var(--card);
+  }
+  .tl-day {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    margin-bottom: 2px;
+    letter-spacing: 0.05em;
+  }
+  .tl-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .tl-desc { font-size: 12px; color: var(--sub); }
+
+  /* Alert box */
+  .callout {
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    margin: 16px 0;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    line-height: 1.5;
+  }
+  .callout-warn { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); color: var(--sub); }
+  .callout-info { background: rgba(99,102,241,0.07); border: 1px solid rgba(99,102,241,0.2); color: var(--sub); }
+  .callout-success { background: rgba(16,185,129,0.07); border: 1px solid rgba(16,185,129,0.2); color: var(--sub); }
+  .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* Checklist */
+  .checklist { list-style: none; margin-top: 12px; }
+  .checklist li {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 0;
+    font-size: 13px;
+    color: var(--sub);
+    border-bottom: 1px solid var(--line);
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .check-box {
+    width: 16px; height: 16px;
+    border: 1.5px solid var(--line);
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .check-box.checked { background: var(--green); border-color: var(--green); }
+  .check-box.checked::after { content: '✓'; color: #fff; font-size: 10px; font-weight: 700; }
+  .check-text strong { color: var(--text); }
+
+  /* Definition table */
+  .def-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
+  .def-table th {
+    text-align: left; padding: 8px 12px;
+    background: rgba(0,0,0,0.03);
+    border-bottom: 1px solid var(--line);
+    font-size: 11px; font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted); letter-spacing: 0.04em;
+  }
+  @media (prefers-color-scheme: dark) {
+    .def-table th { background: rgba(255,255,255,0.04); }
+  }
+  .def-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    color: var(--sub); vertical-align: top;
+  }
+  .def-table td:first-child { font-weight: 600; color: var(--text); white-space: nowrap; }
+  .def-table tr:last-child td { border-bottom: none; }
+
+  /* Section divider */
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 28px 0 20px;
+  }
+  .divider-label {
+    font-size: 11px; font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .divider-line { flex: 1; height: 1px; background: var(--line); }
+
+  /* Severity levels */
+  .sev-grid { display: grid; gap: 10px; margin-top: 16px; }
+  .sev-row {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    font-size: 13px;
+  }
+  .sev-badge {
+    font-size: 11px; font-weight: 700; font-family: 'IBM Plex Mono', monospace;
+    padding: 3px 10px; border-radius: 4px; flex-shrink: 0;
+    min-width: 50px; text-align: center;
+  }
+  .sev-s1 { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+  .sev-s2 { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+  .sev-s3 { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.25); }
+  .sev-s4 { background: rgba(100,116,139,0.12); color: #94a3b8; border: 1px solid rgba(100,116,139,0.2); }
+  .sev-body strong { color: var(--text); display: block; margin-bottom: 2px; font-weight: 600; }
+  .sev-body { color: var(--sub); }
+
+  /* Footer */
+  .footer {
+    margin-top: 40px;
+    padding: 20px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--card);
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-label">⬡ Engineering Department Playbook · v1.0</div>
+  <h1>Bộ Quy Trình Phòng<br><span>Phát Triển Sản Phẩm IT</span></h1>
+  <div class="hero-sub">Chuẩn hóa toàn bộ vòng đời sản phẩm — từ ý tưởng đến vận hành, từ cá nhân đến tổ chức.</div>
+  <div class="hero-badges">
+    <span class="badge badge-indigo">Agile / Scrum</span>
+    <span class="badge badge-green">CI/CD Ready</span>
+    <span class="badge badge-amber">RACI Defined</span>
+    <span class="badge badge-cyan">SLA-driven</span>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <button class="nav-tab active" onclick="switchTab('planning', this)">
+    <span class="dot" style="background:#818cf8"></span> Planning
+  </button>
+  <button class="nav-tab" onclick="switchTab('engineering', this)">
+    <span class="dot" style="background:#22d3ee"></span> Engineering
+  </button>
+  <button class="nav-tab" onclick="switchTab('qa', this)">
+    <span class="dot" style="background:#34d399"></span> QA & Testing
+  </button>
+  <button class="nav-tab" onclick="switchTab('release', this)">
+    <span class="dot" style="background:#f59e0b"></span> Release
+  </button>
+  <button class="nav-tab" onclick="switchTab('incident', this)">
+    <span class="dot" style="background:#f87171"></span> Incident
+  </button>
+  <button class="nav-tab" onclick="switchTab('culture', this)">
+    <span class="dot" style="background:#c084fc"></span> Culture
+  </button>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+<!-- =================== TAB: PLANNING =================== -->
+<div id="tab-planning" class="tab-panel active">
+  <div class="sec-header">
+    <div class="sec-icon" style="background:rgba(129,140,248,0.12)">📋</div>
+    <div>
+      <div class="sec-title">Product Planning & Roadmap</div>
+      <div class="sec-desc">Quy trình từ ý tưởng → PRD → backlog → sprint. Đảm bảo mọi thứ được build đều có lý do rõ ràng.</div>
+    </div>
+  </div>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">💡</span>
+    <div><strong style="color:var(--text)">Nguyên tắc cốt lõi:</strong> Không có ticket nào được vào sprint nếu chưa qua <em>Definition of Ready</em>. Không có feature nào được build nếu chưa gắn với OKR hoặc metric rõ ràng.</div>
+  </div>
+
+  <div class="phase-grid">
+
+    <div class="phase-card open">
+      <div class="phase-header" onclick="togglePhase(this)">
+        <div class="phase-num" style="background:#6366f1">01</div>
+        <div class="phase-name">Quarterly Roadmap Planning</div>
+        <div class="phase-meta">Mỗi quý · 2 ngày</div>
+        <div class="phase-chevron">▶</div>
+      </div>
+      <div class="phase-body">
+        <ul class="steps-list">
+          <li><span class="step-num">1.1</span><div class="step-content"><strong>OKR Review & Alignment</strong>Head of Product + Engineering review OKR hiện tại. Xác định gaps và adjust nếu cần. Output: OKR doc được approve.<span class="step-tag tag-owner">CPO + HoE</span></div></li>
+          <li><span class="step-num">1.2</span><div class="step-content"><strong>Discovery Input Collection</strong>Thu thập: user feedback, support tickets, data analytics, competitor analysis. Mỗi PM present top 5 insights cho team.<span class="step-tag tag-owner">PM</span><span class="step-tag tag-tool">Mixpanel / Hotjar</span></div></li>
+          <li><span class="step-num">1.3</span><div class="step-content"><strong>Initiative Scoring & Prioritization</strong>Score theo ICE (Impact × Confidence ÷ Effort). Loại bỏ những thứ &lt;20 điểm trừ khi có strategic reason đặc biệt.<span class="step-tag tag-owner">PM + EM</span></div></li>
+          <li><span class="step-num">1.4</span><div class="step-content"><strong>Capacity Planning</strong>EM tính toán actual velocity từ 3 sprint gần nhất. Trừ 20% cho tech debt, bug, và unexpected. Commit roadmap theo capacity thực.<span class="step-tag tag-owner">Engineering Manager</span><span class="step-tag tag-must">MANDATORY</span></div></li>
+          <li><span class="step-num">1.5</span><div class="step-content"><strong>Roadmap Publish & Communication</strong>Roadmap được publish lên Confluence/Notion. Stakeholder brief qua async video (Loom). All-hands Q&A trong vòng 1 tuần.<span class="step-tag tag-owner">CPO</span></div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-header" onclick="togglePhase(this)">
+        <div class="phase-num" style="background:#8b5cf6">02</div>
+        <div class="phase-name">Feature Specification (PRD)</div>
+        <div class="phase-meta">Mỗi initiative lớn · 3–5 ngày</div>
+        <div class="phase-chevron">▶</div>
+      </div>
+      <div class="phase-body">
+        <ul class="steps-list">
+          <li><span class="step-num">2.1</span><div class="step-content"><strong>Problem Statement</strong>PM viết rõ: "Ai đang gặp vấn đề gì? Tại sao bây giờ? Metric hiện tại là bao nhiêu? Mục tiêu là bao nhiêu?"</div></li>
+          <li><span class="step-num">2.2</span><div class="step-content"><strong>User Stories + Acceptance Criteria</strong>Format: "As a [role], I want [action] so that [outcome]." Mỗi story phải có AC dạng Given/When/Then.<span class="step-tag tag-must">REQUIRED</span></div></li>
+          <li><span class="step-num">2.3</span><div class="step-content"><strong>Design Mockup Review</strong>Designer present wireframe/prototype. PM + Tech Lead + 1 engineer review. Feedback trong vòng 48h qua comment trên Figma.</div></li>
+          <li><span class="step-num">2.4</span><div class="step-content"><strong>Tech Design Document (TDD)</strong>Tech Lead viết TDD gồm: system design, API contract, DB schema changes, risk & mitigation. Review bởi senior engineers.<span class="step-tag tag-owner">Tech Lead</span></div></li>
+          <li><span class="step-num">2.5</span><div class="step-content"><strong>Definition of Ready Check</strong>Ticket chỉ được vào sprint khi: có AC, estimate, không có dependency open, design approved, TDD reviewed.<span class="step-tag tag-must">GATE</span></div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-header" onclick="togglePhase(this)">
+        <div class="phase-num" style="background:#06b6d4">03</div>
+        <div class="phase-name">Sprint Planning & Backlog Grooming</div>
+        <div class="phase-meta">Mỗi 2 tuần · &lt;2h</div>
+        <div class="phase-chevron">▶</div>
+      </div>
+      <div class="phase-body">
+        <ul class="steps-list">
+          <li><span class="step-num">3.1</span><div class="step-content"><strong>Backlog Grooming (mid-sprint)</strong>PM + EM groom backlog trước sprint planning 3 ngày. Clarify, estimate, tách ticket quá lớn (&gt;8 points → tách).<span class="step-tag tag-sla">Mid-sprint day 8</span></div></li>
+          <li><span class="step-num">3.2</span><div class="step-content"><strong>Sprint Goal Definition</strong>Mỗi sprint có 1 sprint goal rõ ràng. Toàn team đồng thuận trước khi commit. Goal phải measurable.</div></li>
+          <li><span class="step-num">3.3</span><div class="step-content"><strong>Capacity Confirmation</strong>Mỗi dev confirm PTO, meetings, và availability. EM tính capacity theo giờ thực (không phải theo ngày làm việc đơn giản).</div></li>
+          <li><span class="step-num">3.4</span><div class="step-content"><strong>Task Assignment</strong>Dev tự chọn task (pull system, không push). EM đảm bảo không ai bị overload hơn 80% capacity.<span class="step-tag tag-good">Best Practice</span></div></li>
+        </ul>
+        <div class="divider"><div class="divider-line"></div><span class="divider-label">Sprint Timeline (2 tuần)</span><div class="divider-line"></div></div>
+        <div class="sprint-timeline">
+          <div class="tl-item"><div class="tl-day">Day 1</div><div class="tl-title">Sprint Planning</div><div class="tl-desc">Goal setting, task assignment, capacity lock</div></div>
+          <div class="tl-item"><div class="tl-day">Day 1–10</div><div class="tl-title">Development + Daily Standup</div><div class="tl-desc">15 phút / ngày: hôm qua làm gì, hôm nay làm gì, blockers</div></div>
+          <div class="tl-item"><div class="tl-day">Day 8</div><div class="tl-title">Backlog Grooming</div><div class="tl-desc">Chuẩn bị sprint kế tiếp</div></div>
+          <div class="tl-item"><div class="tl-day">Day 10</div><div class="tl-title">Sprint Review</div><div class="tl-desc">Demo với stakeholder — chỉ demo những gì DONE thực sự</div></div>
+          <div class="tl-item"><div class="tl-day">Day 10</div><div class="tl-title">Retrospective</div><div class="tl-desc">What went well / What to improve / Action items có owner</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="divider"><div class="divider-line"></div><span class="divider-label">RACI Matrix — Planning Phase</span><div class="divider-line"></div></div>
+  <div class="raci-wrap">
+    <table class="raci-table">
+      <tr><th>Activity</th><th>CPO/CEO</th><th>PM</th><th>EM</th><th>Tech Lead</th><th>Dev</th><th>QA</th></tr>
+      <tr><td>OKR Setting</td><td><span class="raci-pill raci-A">A</span></td><td><span class="raci-pill raci-R">R</span></td><td><span class="raci-pill raci-C">C</span></td><td><span class="raci-pill raci-I">I</span></td><td><span class="raci-pill raci-I">I</span></td><td><span class="raci-pill raci-I">I</span></td></tr>
+      <tr><td>Roadmap Planning</td><td><span class="raci-pill raci-A">A</span></td><td><span class="raci-pill raci-R">R</span></td><td><span class="raci-pill raci-R">R</span></td><td><span class="raci-pill raci-C">C</span></td><td><span class="raci-pill raci-I">I</span></td><td><span class="raci-pill raci-I">I</span></td></tr>
+      <tr><td>PRD Writing</td><td><span class="raci-pill raci-I">I</span></td><td><span class="raci-pill raci-R">R</span></td><td><span class="raci-pill raci-C">C</span></td><td><span class="raci-pill raci-C">C</span></td><td><span class="raci-pill raci-I">I</span></td><td><span class="raci-pill raci-C">C</span></td></tr>
+      <tr><td>Sprint Planning</td><td><span class="raci-pill raci-I">I</span></td><td><span class="raci-pill raci-C">C</span></td><td><span class="raci-pill raci-R">R</span></td><td><span class="raci-pill raci-R">R</span></td><td><span class="raci-pill raci-R">R</span></td><td><span class="raci-pill raci-R">R</span></td></tr>
+      <tr><td>Tech Design</td><td><span class="raci-pill raci-I">I</span></td><td><span class="raci-pill raci-I">I</span></td><td><span class="raci-pill raci-A">A</span></td><td><span class="raci-pill raci-R">R</span></td><td><span class="raci-pill raci-C">C</span></td><td><span class="raci-pill raci-I">I</span></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- =================== TAB: ENGINEERING =================== -->
+<div id="tab-engineering" class="tab-panel">
+  <div class="sec-header">
+    <div class="sec-icon" style="background:rgba(34,211,238,0.12)">⚙️</div>
+    <div>
+      <div class="sec-title">Engineering Workflow</div>
+      <div class="sec-desc">Git branching, code review, và development standards giúp team ship nhanh mà vẫn an toàn.</div>
+    </div>
+  </div>
+
+  <div class="phase-grid">
+
+    <div class="phase-card open">
+      <div class="phase-header" onclick="togglePhase(this)">
+        <div class="phase-num" style="background:#0ea5e9">01</div>
+        <div class="phase-name">Git Branching Strategy</div>
+        <div class="phase-meta">Gitflow Simplified</div>
+        <div class="phase-chevron">▶</div>
+      </div>
+      <div class="phase-body">
+        <table class="def-table">
+          <tr><th>Branch</th><th>Mục đích</th><th>Ai tạo</th><th>Merge vào</th></tr>
+          <tr><td>main</td><td>Production code, luôn deployable</td><td>Protected</td><td>—</td></tr>
+          <tr><td>develop</td><td>Integration branch, latest dev code</td><td>Protected</td><td>main (via release)</td></tr>
+          <tr><td>feature/[ticket]-[desc]</td><td>Feature mới theo ticket</td><td>Dev</td><td>develop</td></tr>
+          <tr><td>fix/[ticket]-[desc]</td><td>Bug fix không urgent</td><td>Dev</td><td>develop</td></tr>
+          <tr><td>hotfix/[ticket]-[desc]</td><td>Production bug urgent</td><td>Dev + EM approve</td><td>main + develop</td></tr>
+          <tr><td>release/vX.Y.Z</td><td>Release candidate</td><td>Release manager</td><td>main + develop</td></tr>
+        </table>
+        <div class="callout callout-warn" style="margin-top:16px">
+          <span class="callout-icon">⚠️</span>
+          <div>Branch name phải theo format: <code style="font-family:monospace;background:rgba(0,0,0,0.07);padding:2px 5px;border-radius:3px">feature/ENG-123-add-qr-scanner</code>. Commit trực tiếp vào <code style="font-family:monospace;background:rgba(0,0,0,0.07);padding:2px 5px;border-radius:3px">main</code> hoặc <code style="font-family:monospace;background:rgba(0,0,0,0.07);padding:2px 5px;border-radius:3px">develop</code> bị block bởi branch protection rules.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-header" onclick="togglePhase(this)">
+        <div class="phase-num" style="background:#06b6d4">02</div>
+        <div class="phase-name">Commit Message Convention</div>
+        <div class="phase-meta">Conventional Commits</div>
+        <div class="phase-chevron">▶</div>
+      </div>
+      <div class="phase-body">
+        <table class="def-table">
+          <tr><th>Type</th><th>Khi nào dùng</th><th>Ví dụ</th></tr>
+          <tr><td>feat</td><td>Tính năng mới</td><td>feat(auth): add QR login flow</td></tr>
+          <tr><td>fix</td><td>Bug fix</td><td>fix(scanner): handle null payload</td></tr>
+          <tr><td>refactor</td><td>Refactor không thay đổi behavior</td><td>refactor(session): extract payment logic</td></tr>
+          <tr><td>test</td><td>Thêm / sửa test</td><td>test(order): add batch create unit test</td></tr>
+          <tr><td>docs</td><td>Tài liệu</td><td>docs: update API README</td></tr>
+          <tr><td>chore</td><td>Build, deps, config</td><td>chore: bump next.js to 15.2</td></tr>
+          <tr><td>perf</td><td>Performance improvement</td><td>perf(query): add index on session_id</td></tr>
+          <tr><td>BREAKING</td><td>Breaking change</td><td>feat!: migrate to new auth API</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-header" onclick="togglePhase(this)">
+        <div class="phase-num" style="background:#10b981">03</div>
+        <div class="phase-name">Code Review Process (Pull Request)</div>
+        <div class="phase-meta">SLA: 1 business day first review</div>
+        <div class="phase-chevron">▶</div>
+      </div>
+      <div class="phase-body">
+        <ul class="steps-list">
+          <li><span class="step-num">3.1</span><div class="step-content"><strong>PR Size Limit</strong>Tối đa 400 lines changed (trừ auto-generated). PR lớn hơn phải được tách hoặc có lý do document rõ ràng.<span class="step-tag tag-must">HARD RULE</span></div></li>
+          <li><span class="step-num">3.2</span><div class="step-content"><strong>PR Description Template</strong>Bắt buộc: Link ticket, What changed & Why, How to test locally, Screenshot/Video nếu có UI change, Checklist (tests pass, no lint errors).</div></li>
+          <li><span class="step-num">3.3</span><div class="step-content"><strong>Reviewer Assignment</strong>Minimum 1 approver (hoặc 2 nếu thay đổi core logic, security, hoặc DB schema). Tech Lead là required reviewer cho breaking changes.<span class="step-tag tag-sla">1 ngày làm việc</span></div></li>
+          <li><span class="step-num">3.4</span><div class="step-content"><strong>Review Etiquette</strong>Comments phải constructive và specific. Prefix: [MUST], [SUGGEST], [QUESTION], [NITPICK]. Tránh "this is wrong" — luôn giải thích tại sao và đề xuất cách khác.</div></li>
+          <li><span class="step-num">3.5</span><div class="step-content"><strong>Auto Checks (CI)</strong>Tất cả CI checks phải pass trước khi merge: Lint, Unit tests, Type check, Build, Security scan (Snyk/Dependabot).<span class="step-tag tag-must">BLOCKING</span></div></li>
+          <li><span class="step-num">3.6</span><div class="step-content"><strong>Merge Strategy</strong>Squash and merge cho feature branches (clean commit history trên develop/main). Rebase chỉ được dùng cho local cleanup.</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-header" onclick="togglePhase(this)">
+        <div class="phase-num" style="background:#6366f1">04</div>
+        <div class="phase-name">Definition of Done (DoD)</div>
+        <div class="phase-meta">Checklist bắt buộc trước khi close ticket</div>
+        <div class="phase-chevron">▶</div>
+      </div>
+      <div class="phase-body">
+        <ul class="checklist" id="dod-list">
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><div class="check-text"><strong>Code đã qua review và được approve</strong> — tối thiểu 1 reviewer, PR merged</div></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><div class="check-text"><strong>Unit tests đã được viết</strong> — coverage không giảm so với baseline</div></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><div class="check-text"><strong>All CI checks pass</strong> — lint, test, build, type check</div></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><div class="check-text"><strong>Acceptance Criteria được verify</strong> — QA hoặc dev tự test theo AC</div></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><div class="check-text"><strong>Deploy lên Staging thành công</strong> — không có regression</div></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><div class="check-text"><strong>Documentation cập nhật</strong> — API docs, README, hoặc Confluence nếu có thay đổi</div></li>
+          <li><div class="check-box" onclick="toggleCheck(this)"></div><div class="check-text"><strong>Ticket status cập nhật</strong> — ticket moved to Done, linked với PR</div></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- =================== TAB: QA =================== -->
+<div id="tab-qa" class="tab-panel">
+  <div class="sec-header">
+    <div class="sec-icon" style="background:rgba(52,211,153,0.12)">🧪</div>
+    <div>
+      <div class="sec-title">QA & Testing Process</div>
+      <div class="sec-desc">Chiến lược testing để đảm bảo chất lượng mà không làm chậm tốc độ phát triển.</div>
+    </div>
+  </div>
+
+  <div class="callout callout-success">
+    <span class="callout-icon">🎯</span>
+    <div><strong style="color:var(--text)">Testing Pyramid:</strong> 70% Unit Tests · 20% Integration Tests · 10% E2E Tests. Đừng lộn ngược — E2E test nhiều = CI chậm, flaky, và tốn thời gian maintain.</div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-label">UNIT COVERAGE</div><div class="kpi-value" style="color:#10b981">≥80%</div><div class="kpi-desc">Target tối thiểu cho critical paths</div></div>
+    <div class="kpi-card"><div class="kpi-label">BUG ESCAPE RATE</div><div class="kpi-value" style="color:#6366f1">&lt;5%</div><div class="kpi-desc">Bugs được phát hiện sau khi release</div></div>
+    <div class="kpi-card"><div class="kpi-label">TEST EXECUTION</div><div class="kpi-value" style="color:#f59e0b">&lt;15m</div><div class="kpi-desc">Toàn bộ CI pipeline chạy xong</div></div>
+    <div class="kpi-card"><div class="kpi-label">FLAKY TEST RATE</div><div class="kpi-value" style="color:#ef4444">&lt;2%</div><div class="kpi-desc">Test không ổn định phải được fix</div></div>
+  </div>
+
+  <div class="phase-grid" style="margin-top:20px">
+
+    <div class="phase-card open">
+      <div class="phase-header" onclick="togglePhase(this)">
+        <div class="phase-num" style="background:#10b981">01</div>
+        <div class="phase-name">Developer Testing (Shift Left)</div>
+        <div class="phase-meta">Dev tự test trước khi tạo PR</div>
+        <div class="phase-chevron">▶</div>
+      </div>
+      <div class="phase-body">
+        <ul class="steps-list">
+          <li><span class="step-num">1.1</span><div class="step-content"><strong>Unit Testing</strong>Dev viết unit test cùng lúc với code (TDD hoặc ngay sau). Jest cho JS/TS. Mock external dependencies. Test edge cases, không chỉ happy path.</div></li>
+          <li><span class="step-num">1.2</span><div class="step-content"><strong>Integration Testing</strong>Test API endpoints với database thật (test DB). Supertest cho Express/Next.js. Verify contracts giữa services.</div></li>
+          <li><span class="step-num">1.3</span><div class="step-content"><strong>Local Smoke Test</strong>Trước khi tạo PR, dev phải tự test theo AC. Screenshot hoặc video evidence đính kèm vào PR.<span class="step-tag tag-must">REQUIRED</span></div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-header" onclick="togglePhase(this)">
+        <div class="phase-num" style="background:#0ea5e9">02</div>
+        <div class="phase-name">QA Team Testing</div>
+        <div class="phase-meta">Sau khi deploy lên Staging</div>
+        <div class="phase-chevron">▶</div>
+      </div>
+      <div class="phase-body">
+        <ul class="steps-list">
+          <li><span class="step-num">2.1</span><div class="step-content"><strong>Test Case Design</strong>QA viết test cases từ AC trong ticket. Format: Given/When/Then. Mỗi feature phải có test case trước khi dev bắt đầu code (BDD approach).<span class="step-tag tag-good">BDD</span></div></li>
+          <li><span class="step-num">2.2</span><div class="step-content"><strong>Functional Testing</strong>Verify tất cả AC đều pass. Test cross-browser nếu có UI changes. Test responsive trên ít nhất mobile + desktop.</div></li>
+          <li><span class="step-num">2.3</span><div class="step-content"><strong>Regression Testing</strong>Chạy regression suite cho các flows liên quan đến feature mới. Ưu tiên automated regression (Playwright/Cypress).<span class="step-tag tag-tool">Playwright</span></div></li>
+          <li><span class="step-num">2.4</span><div class="step-content"><strong>Bug Reporting</strong>Bug report phải có: steps to reproduce, expected vs actual, environment, severity level, screenshot/video. Không accept bug report thiếu thông tin.<span class="step-tag tag-must">REQUIRED FORMAT</span></div></li>
+          <li><span class="step-num">2.5</span><div class="step-content"><strong>Sign-off</strong>QA sign-off bằng cách comment "QA Approved" trên ticket. Không có QA sign-off → không được release.<span class="step-tag tag-must">GATE</span></div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-header" onclick="togglePhase(this)">
+        <div class="phase-num" style="background:#8b5cf6">03</div>
+        <div class="phase-name">Performance & Security Testing</div>
+        <div class="phase-meta">Trước mỗi major release</div>
+        <div class="phase-chevron">▶</div>
+      </div>
+      <div class="phase-body">
+        <ul class="steps-list">
+          <li><span class="step-num">3.1</span><div class="step-content"><strong>Load Testing</strong>k6 hoặc Artillery test với expected peak load × 2. API phải handle p99 &lt; 500ms dưới normal load.<span class="step-tag tag-tool">k6</span><span class="step-tag tag-sla">p99 &lt; 500ms</span></div></li>
+          <li><span class="step-num">3.2</span><div class="step-content"><strong>Security Scan</strong>OWASP ZAP cho API security. Snyk cho dependency vulnerabilities. No high/critical CVE được phép vào production.<span class="step-tag tag-tool">Snyk + OWASP ZAP</span></div></li>
+          <li><span class="step-num">3.3</span><div class="step-content"><strong>Accessibility (A11y)</strong>Axe DevTools check cho mọi UI change. Minimum AA compliance. Screen reader test cho critical flows.</div></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- =================== TAB: RELEASE =================== -->
+<div id="tab-release" class="tab-panel">
+  <div class="sec-header">
+    <div class="sec-icon" style="background:rgba(245,158,11,0.12)">🚀</div>
+    <div>
+      <div class="sec-title">Deployment & Release Management</div>
+      <div class="sec-desc">Quy trình release an toàn, có thể rollback nhanh và observability đầy đủ.</div>
+    </div>
+  </div>
+
+  <div class="phase-grid">
+
+    <div class="phase-card open">
+      <div class="phase-header" onclick="togglePhase(this)">
+        <div class="phase-num" style="background:#f59e0b">01</div>
+        <div class="phase-name">Environment Strategy</div>
+        <div class="phase-meta">3-tier environments</div>
+        <div class="phase-chevron">▶</div>
+      </div>
+      <div class="phase-body">
+        <table class="def-table">
+          <tr><th>Environment</th><th>Mục đích</th><th>Ai deploy</th><th>Auto Deploy</th><th>DB</th></tr>
+          <tr><td>Development</td><td>Local dev, experiment</td><td>Dev (self)</td><td>N/A</td><td>Local / Docker</td></tr>
+          <tr><td>Staging</td><td>QA testing, demo</td><td>CI/CD (auto)</td><td>Mỗi merge vào develop</td><td>Staging DB (clone prod schema)</td></tr>
+          <tr><td>Production</td><td>Live users</td><td>CI/CD (manual trigger)</td><td>Sau approval</td><td>Production DB</td></tr>
+        </table>
+        <div class="callout callout-warn" style="margin-top:16px">
+          <span class="callout-icon">🔒</span>
+          <div>Production deployment phải được approve bởi EM hoặc Tech Lead. Không được deploy vào production sau 4pm hoặc trước ngày lễ mà không có On-call engineer sẵn sàng.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-header" onclick="togglePhase(this)">
+        <div class="phase-num" style="background:#f97316">02</div>
+        <div class="phase-name">CI/CD Pipeline</div>
+        <div class="phase-meta">GitHub Actions / GitLab CI</div>
+        <div class="phase-chevron">▶</div>
+      </div>
+      <div class="phase-body">
+        <ul class="steps-list">
+          <li><span class="step-num">PR</span><div class="step-content"><strong>PR Pipeline</strong>Lint → Type Check → Unit Tests → Build Check → Security Scan. Phải pass 100% trước khi reviewer review.</div></li>
+          <li><span class="step-num">STG</span><div class="step-content"><strong>Staging Pipeline</strong>Trigger khi merge vào develop. Run all tests → Build Docker image → Push to registry → Deploy to Staging → Smoke test.</div></li>
+          <li><span class="step-num">PROD</span><div class="step-content"><strong>Production Pipeline</strong>Manual trigger (sau QA sign-off). Blue/Green hoặc Rolling deploy. Health check sau deploy. Notify Slack khi hoàn tất.<span class="step-tag tag-must">MANUAL APPROVAL</span></div></li>
+          <li><span class="step-num">DB</span><div class="step-content"><strong>Database Migrations</strong>Chạy migrations trước khi deploy app. Migrations phải backward-compatible (expand/contract pattern). Có rollback migration sẵn sàng.<span class="step-tag tag-must">CRITICAL</span></div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-header" onclick="togglePhase(this)">
+        <div class="phase-num" style="background:#ef4444">03</div>
+        <div class="phase-name">Rollback Strategy</div>
+        <div class="phase-meta">Phải thực hiện được trong &lt;10 phút</div>
+        <div class="phase-chevron">▶</div>
+      </div>
+      <div class="phase-body">
+        <ul class="steps-list">
+          <li><span class="step-num">R1</span><div class="step-content"><strong>Feature Flags</strong>Mọi feature lớn phải được wrap trong feature flag. Kill switch để disable ngay khi có vấn đề mà không cần deploy.<span class="step-tag tag-tool">LaunchDarkly / Unleash</span><span class="step-tag tag-good">Best Practice</span></div></li>
+          <li><span class="step-num">R2</span><div class="step-content"><strong>Container Rollback</strong>Docker images được tag theo git SHA. Rollback = deploy lại image trước đó. Target: &lt;5 phút.</div></li>
+          <li><span class="step-num">R3</span><div class="step-content"><strong>Database Rollback</strong>Nếu migration gây vấn đề, chạy down migration. Nếu không được, restore từ snapshot (phải có snapshot &lt;1h trước deploy).<span class="step-tag tag-sla">RTO &lt; 30 phút</span></div></li>
+          <li><span class="step-num">R4</span><div class="step-content"><strong>Post-Deploy Monitoring</strong>Monitor 30 phút đầu sau deploy: error rate, latency, CPU/Memory. Alert nếu error rate tăng &gt;50% so với baseline.</div></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- =================== TAB: INCIDENT =================== -->
+<div id="tab-incident" class="tab-panel">
+  <div class="sec-header">
+    <div class="sec-icon" style="background:rgba(248,113,113,0.12)">🚨</div>
+    <div>
+      <div class="sec-title">Incident & On-call Management</div>
+      <div class="sec-desc">Phản ứng nhanh, có cấu trúc, học từ sự cố để không lặp lại.</div>
+    </div>
+  </div>
+
+  <div class="divider"><div class="divider-line"></div><span class="divider-label">Severity Levels & SLA</span><div class="divider-line"></div></div>
+
+  <div class="sev-grid">
+    <div class="sev-row">
+      <span class="sev-badge sev-s1">SEV-1</span>
+      <div class="sev-body"><strong>Production Down / Data Loss</strong>Toàn bộ service không hoạt động hoặc có nguy cơ mất dữ liệu. SLA: Acknowledge ≤15 phút, Resolve ≤4h. Wake up On-call ngay lập tức.</div>
+    </div>
+    <div class="sev-row">
+      <span class="sev-badge sev-s2">SEV-2</span>
+      <div class="sev-body"><strong>Major Feature Broken</strong>Core feature không hoạt động cho nhiều user nhưng service vẫn sống. SLA: Acknowledge ≤30 phút, Resolve ≤8h trong giờ làm việc.</div>
+    </div>
+    <div class="sev-row">
+      <span class="sev-badge sev-s3">SEV-3</span>
+      <div class="sev-body"><strong>Minor Degradation</strong>Feature phụ bị ảnh hưởng hoặc performance giảm. SLA: Acknowledge ≤4h, Resolve trong sprint hiện tại hoặc kế tiếp.</div>
+    </div>
+    <div class="sev-row">
+      <span class="sev-badge sev-s4">SEV-4</span>
+      <div class="sev-body"><strong>Low Priority / Cosmetic</strong>Lỗi nhỏ không ảnh hưởng chức năng. Thêm vào backlog và prioritize theo quy trình bình thường.</div>
+    </div>
+  </div>
+
+  <div class="divider"><div class="divider-line"></div><span class="divider-label">Incident Response Playbook</span><div class="divider-line"></div></div>
+
+  <div class="phase-card open">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <div class="phase-num" style="background:#ef4444">▶</div>
+      <div class="phase-name">5 bước xử lý Incident</div>
+      <div class="phase-meta">Áp dụng từ SEV-1 và SEV-2</div>
+      <div class="phase-chevron">▶</div>
+    </div>
+    <div class="phase-body">
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><div class="step-content"><strong>DETECT & DECLARE</strong>Ai phát hiện trước → tạo incident channel trên Slack (#incident-YYYYMMDD-[desc]). Tag On-call engineer và EM. Đừng cố tự fix âm thầm.<span class="step-tag tag-must">WITHIN 15 MIN</span></div></li>
+        <li><span class="step-num">2</span><div class="step-content"><strong>ASSIGN ROLES</strong>Incident Commander (IC): điều phối, không code. Tech Lead: investigate. Comms Lead: update stakeholder mỗi 30 phút. Không để 1 người làm tất cả.</div></li>
+        <li><span class="step-num">3</span><div class="step-content"><strong>MITIGATE FIRST, FIX SECOND</strong>Ưu tiên giảm impact trước (feature flag off, rollback, scale up). Root cause có thể fix sau. "Stop the bleeding" là mục tiêu đầu tiên.</div></li>
+        <li><span class="step-num">4</span><div class="step-content"><strong>COMMUNICATE</strong>Update status page. Notify users bị ảnh hưởng (nếu cần). Internal update mỗi 30 phút. Clear, factual, không blame.</div></li>
+        <li><span class="step-num">5</span><div class="step-content"><strong>POST-MORTEM</strong>Bắt buộc với SEV-1 và SEV-2. Trong vòng 48h sau khi resolve. Format: Timeline, Root Cause, Impact, Action Items (có owner và deadline). Blameless culture.<span class="step-tag tag-must">MANDATORY SEV-1/2</span></div></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout callout-info" style="margin-top:16px">
+    <span class="callout-icon">📌</span>
+    <div><strong style="color:var(--text)">On-call Rotation:</strong> Mỗi engineer tham gia on-call rotation sau 6 tháng làm việc. Schedule công bố trước 2 tuần. Compensation: ngày bù hoặc phụ cấp theo policy công ty. Không để on-call rotation là "ai rảnh thì làm".</div>
+  </div>
+</div>
+
+<!-- =================== TAB: CULTURE =================== -->
+<div id="tab-culture" class="tab-panel">
+  <div class="sec-header">
+    <div class="sec-icon" style="background:rgba(192,132,252,0.12)">🌱</div>
+    <div>
+      <div class="sec-title">Team Culture & Performance</div>
+      <div class="sec-desc">Engineering culture quyết định tốc độ và chất lượng dài hạn hơn bất kỳ tool hay process nào.</div>
+    </div>
+  </div>
+
+  <div class="phase-grid">
+
+    <div class="phase-card open">
+      <div class="phase-header" onclick="togglePhase(this)">
+        <div class="phase-num" style="background:#8b5cf6">01</div>
+        <div class="phase-name">1-on-1 Meetings</div>
+        <div class="phase-meta">EM ↔ Dev · Mỗi 2 tuần · 30 phút</div>
+        <div class="phase-chevron">▶</div>
+      </div>
+      <div class="phase-body">
+        <ul class="steps-list">
+          <li><span class="step-num">▪</span><div class="step-content"><strong>Agenda do Dev làm chủ</strong>1-on-1 là của dev, không phải status report. EM hỏi: "Bạn đang bị gì block? Bạn muốn grow theo hướng nào? Có gì tôi cần làm để giúp bạn tốt hơn không?"</div></li>
+          <li><span class="step-num">▪</span><div class="step-content"><strong>Career Growth Discussion</strong>Ít nhất 1 lần/tháng: review career path, kỹ năng đang develop, gap so với level tiếp theo.</div></li>
+          <li><span class="step-num">▪</span><div class="step-content"><strong>Skip-level Meeting</strong>Head of Engineering gặp từng dev mỗi quý. Mục đích: nghe trực tiếp, không qua filter của EM.</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-header" onclick="togglePhase(this)">
+        <div class="phase-num" style="background:#a855f7">02</div>
+        <div class="phase-name">Performance Review</div>
+        <div class="phase-meta">Nửa năm · Structured feedback</div>
+        <div class="phase-chevron">▶</div>
+      </div>
+      <div class="phase-body">
+        <table class="def-table">
+          <tr><th>Dimension</th><th>Trọng số</th><th>Đánh giá dựa trên</th></tr>
+          <tr><td>Technical Impact</td><td>35%</td><td>PRs, system design contributions, code quality</td></tr>
+          <tr><td>Delivery</td><td>25%</td><td>Velocity, DoD compliance, sprint commitment</td></tr>
+          <tr><td>Collaboration</td><td>20%</td><td>Code review quality, unblocking others, documentation</td></tr>
+          <tr><td>Growth Mindset</td><td>10%</td><td>Learning, feedback receptiveness, initiative</td></tr>
+          <tr><td>Culture Fit</td><td>10%</td><td>Values alignment, communication, team health</td></tr>
+        </table>
+        <div class="callout callout-warn" style="margin-top:12px">
+          <span class="callout-icon">⚠️</span>
+          <div>Không đánh giá dựa trên "số giờ làm việc" hay "số commits". Impact quan trọng hơn activity. 1 PR refactor tốt có thể valuable hơn 20 PR nhỏ vô nghĩa.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-header" onclick="togglePhase(this)">
+        <div class="phase-num" style="background:#6366f1">03</div>
+        <div class="phase-name">Engineering Excellence Practices</div>
+        <div class="phase-meta">Habits làm nên team tốt</div>
+        <div class="phase-chevron">▶</div>
+      </div>
+      <div class="phase-body">
+        <ul class="steps-list">
+          <li><span class="step-num">▪</span><div class="step-content"><strong>Tech Debt Budget</strong>20% capacity mỗi sprint dành cho tech debt, refactor, và tooling improvements. Không thương lượng. Engineering là đối tác, không phải nhà máy.<span class="step-tag tag-must">NON-NEGOTIABLE</span></div></li>
+          <li><span class="step-num">▪</span><div class="step-content"><strong>Engineering Blog / Knowledge Sharing</strong>Mỗi tháng 1 tech sharing session (30 phút). Engineer tự chọn topic. Tạo culture chia sẻ, không giữ knowledge cho mình.<span class="step-tag tag-good">Monthly</span></div></li>
+          <li><span class="step-num">▪</span><div class="step-content"><strong>Learning Budget</strong>Mỗi engineer có budget cho sách, khóa học, conference. EM review và approve. Learning goal gắn với career development plan.</div></li>
+          <li><span class="step-num">▪</span><div class="step-content"><strong>Architecture Decision Records (ADR)</strong>Mọi technical decision lớn phải có ADR: context, options considered, decision, consequences. Lưu vào repo.<span class="step-tag tag-tool">Markdown in /docs/adr</span></div></li>
+          <li><span class="step-num">▪</span><div class="step-content"><strong>Blameless Post-mortem Culture</strong>Incident xảy ra do system failure, không phải người failure. Focus vào "what failed" không phải "who failed". Psychological safety là nền tảng để team ship fast.</div></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="kpi-grid" style="margin-top:8px">
+    <div class="kpi-card"><div class="kpi-label">TEAM HEALTH</div><div class="kpi-value" style="color:#8b5cf6">eNPS</div><div class="kpi-desc">Survey hàng quý, target ≥ 30</div></div>
+    <div class="kpi-card"><div class="kpi-label">ATTRITION</div><div class="kpi-value" style="color:#10b981">&lt;15%</div><div class="kpi-desc">Tỷ lệ nghỉ việc hàng năm</div></div>
+    <div class="kpi-card"><div class="kpi-label">TIME TO ONBOARD</div><div class="kpi-value" style="color:#06b6d4">30d</div><div class="kpi-desc">Dev mới tự ship feature đầu tiên</div></div>
+    <div class="kpi-card"><div class="kpi-label">REVIEW TIME</div><div class="kpi-value" style="color:#f59e0b">24h</div><div class="kpi-desc">PR first review SLA</div></div>
+  </div>
+</div>
+
+</div><!-- end content -->
+
+<div class="content" style="padding-top:0">
+  <div class="footer">
+    Engineering Playbook v1.0 · Last updated March 2026 · Head of Engineering
+  </div>
+</div>
+
+</div><!-- end shell -->
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function togglePhase(header) {
+  const card = header.parentElement;
+  card.classList.toggle('open');
+}
+
+function toggleCheck(box) {
+  box.classList.toggle('checked');
+}
+</script>
+</body>
+</html>

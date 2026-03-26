@@ -1,93 +1,141 @@
-# 🧪 Milktea Party - Test Skill & Quality Assurance Standards (v1.2)
-> **Slogan:** "Bug là kẻ thù, E2E là vũ khí."
-> **Motto:** "Don't just test if it works, test how it fails."
+---
+name: Tester Skill
+description: Test execution methodology, test case structure, bug reporting, and evidence policy
+---
+
+# 🧪 Tester Skill — Testing Methodology & Reporting
 
 ---
 
-## ⚡ 1. TESTER WORKFLOW & DEPENDENCY
-- **Đầu vào (Input):** Nhận PR từ Dev và AC (Gherkin Scenarios) từ BA.
-- **Đầu ra (Output):** **TEST ✅** trong Registry hoặc **BUG-xxx**.
-- **Sự phụ thuộc:** QC có thể duyệt song song, nhưng PM chỉ Merge khi Test đã xác nhận "Green".
+## 1. Test Case Structure
+
+### Format bắt buộc cho mỗi `TEST-xxx`
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| **ID** | `TEST-xxx` | `TEST-001` |
+| **Target** | Task/API being tested | `API-005` |
+| **Objective** | What is being validated | Calculate shipping with voucher |
+| **Precondition** | Initial state required | Session OPEN, ≥2 participants |
+| **Steps** | Numbered steps to execute | 1. Add item A (50k)... |
+| **Expected** | Expected outcome | Shipping split proportionally |
+| **Actual** | Filled after execution | (Updated after test) |
+| **Status** | ✅ Pass / ❌ Fail | ✅ |
 
 ---
 
-## 🏗️ 2. CORE SKILLS
-- **E2E Automation:** Triển khai test trên môi trường Preview của nhánh Feature.
-- **Bug Lifecycle:** Khi phát hiện lỗi, phải cập nhật `REGISTRY.md` và chuyển trạng thái Task về `RE-OPEN`.
+## 2. Testing Scope
+
+### Test Types by Priority
+| Type | When | Tool |
+|------|------|------|
+| **API Testing** | Every endpoint | cURL / Postman / httpie |
+| **UI Testing** | Every UI change | Browser (Chrome DevTools) |
+| **E2E Testing** | Core flows | Playwright / Cypress |
+| **WebSocket Testing** | Realtime features | Custom scripts |
+| **Performance** | Before major release | k6 / Artillery |
+
+### Coverage Requirements
+- **Every task** must have ≥3 test scenarios:
+  1. ✅ Positive (happy path)
+  2. ❌ Negative (invalid input, unauthorized access)
+  3. 🔲 Boundary (min/max values, empty data, edge cases)
 
 ---
 
-## ⚡ 3. TEST COMMANDS (Mã lệnh kiểm thử)
-Khi kích hoạt `/test`, tôi sẽ thực hiện các tác vụ sau:
+## 3. E2E Testing Methodology
 
-| Mã lệnh | Mô tả tác vụ |
-| :--- | :--- |
-| **`/test cases`** | Viết kịch bản kiểm thử (`TEST-xxx`) dựa trên `REQ-xxx` và `api_spec.md`. |
-| **`/test api`** | Kiểm thử Endpoint API (Postman/Curl), validate JSON Schema và Status Code. |
-| **`/test ui`** | Kiểm tra giao diện Next.js 16, Responsive Mobile và UX đặt món. |
-| **`/test ws`** | Kiểm tra tính đồng bộ Realtime qua WebSocket (Sync giữa các Client). |
-| **`/test bug`** | Báo cáo lỗi vào **BUG TRACKER** trong `REGISTRY.md`. |
-| **`/test verify`** | Kiểm tra lại (Retest) các Bug đã được Dev báo là "Fixed". |
+### Scenario Design
+Mô phỏng full user journey:
+```
+Open App → Create Session → Join → Order Items → Lock → Checkout → Verify QR → Complete
+```
 
----
+### Data Consistency Check
+- UI display phải khớp 100% với API response
+- API response phải khớp 100% với database
+- Verify ở cả 3 lớp: **UI ↔ API ↔ DB**
 
-## 🏗️ 4. TEST CASE STRUCTURE (Cấu trúc kịch bản)
-Mỗi kịch bản `TEST-xxx` phải được trình bày theo bảng:
-
-| Field | Description |
-| :--- | :--- |
-| **ID** | `TEST-xxx` (Ví dụ: `TEST-001`) |
-| **Mục tiêu** | Kiểm tra logic tính phí ship khi có Voucher. |
-| **Điều kiện** | Phòng đang `OPEN`, có ít nhất 2 người đặt món. |
-| **Các bước** | 1. Thêm món A (50k). 2. Thêm món B (100k). 3. Áp Voucher -15k ship. |
-| **Kỳ vọng** | Phí ship sau giảm chia đúng tỷ lệ 1:2 cho A và B. |
-| **Thực tế** | (Cập nhật sau khi test) |
+### Environment
+- Execute trên **Staging/Preview** environment
+- Mỗi test run dùng clean data (hoặc setup/teardown)
+- Test trên ít nhất: Mobile Chrome + Desktop Chrome
 
 ---
 
-## 🔍 5. TESTING SCOPE (Phạm vi kiểm thử)
+## 4. Bug Reporting Format
 
-### A. E2E Automation (Kiểm thử toàn trình)
-*   **E2E Scenarios:** Xây dựng kịch bản kiểm thử toàn trình mô phỏng hành trình người dùng: Mở app -> Tạo Session -> Đặt món -> Chốt đơn -> Kiểm tra QR.
-*   **Tooling:** Sử dụng **Playwright** hoặc **Cypress** để thực hiện E2E trên trình duyệt.
-*   **Data Consistency:** Kiểm tra dữ liệu cuối cùng trong PostgreSQL phải khớp chính xác với những gì hiển thị trên giao diện sau khi kết thúc luồng E2E.
+### Registry Bug Tracker
+```markdown
+| Bug ID | Related | Description | Severity | Status |
+|--------|---------|-------------|----------|--------|
+| BUG-xxx | API-005 | Negative qty accepted | High | Open |
+```
 
----
+### Bug Report Details (khi create)
+```markdown
+## BUG-xxx: [Short description]
+- **Severity**: Critical / High / Medium / Low
+- **Related Task**: FEAT-xxx / API-xxx
+- **Environment**: Staging / Preview / Production
 
-## 📊 6. REPORTING & EVIDENCE POLICY
-- **Success Case:** Không lưu log chi tiết. Chỉ xác nhận ✅ kèm 1 câu tóm tắt: "All scenarios passed".
-- **Critical Path:** Với các task P0 (Thanh toán), lưu lại 01 đoạn JSON Response làm bằng chứng duy nhất vào `tests/REPORTS.md`.
-- **Failure Case:** Bắt buộc lưu chi tiết: Expected vs Actual và mã lỗi để `/dev` xử lý.
-- **Log Retention:** Chỉ giữ lại kết quả của lần test gần nhất. Xóa các log cũ của cùng một Task để tránh file quá dài.
+### Steps to Reproduce
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
 
----
+### Expected
+[What should happen]
 
-## 🐞 7. BUG REPORTING STANDARDS (Quy chuẩn báo lỗi)
-Khi phát hiện lỗi, `/test` cập nhật vào `REGISTRY.md` với định dạng:
+### Actual
+[What actually happened]
 
-| Bug ID | Mức độ | Mô tả lỗi | Link Task | Trạng thái |
-| :--- | :--- | :--- | :--- | :--- |
-| `BUG-xxx` | **High** | Phí ship không giảm khi áp Voucher. | `API-005` | `Open` |
+### Evidence
+[Screenshot / Video / Response JSON]
+```
 
-*   **Evidence:** Chụp ảnh màn hình (nếu có UI) hoặc copy log lỗi từ Network/Console.
-*   **Steps to Reproduce:** Ghi rõ 3 bước để tái hiện lỗi cho Dev.
-
----
-
-## 🧪 8. AUTOMATION & TOOLS
-*   **API Testing:** Sử dụng Postman hoặc scripts `curl` để test nhanh các luồng API.
-*   **Browser:** Chrome DevTools (Simulate iPhone/Android).
-*   **Network:** Thử nghiệm với tốc độ mạng chậm (Slow 3G) để xem UX loading.
-
----
-
-## ✅ 9. TEST'S DEFINITION OF DONE (Tiêu chuẩn xác nhận)
-Tester chỉ đánh dấu ✅ vào cột **TEST** trong `REGISTRY.md` khi:
-- [ ] Đã chạy hết các kịch bản Positive (Luồng đúng).
-- [ ] Đã chạy ít nhất 3 kịch bản Negative/Boundary.
-- [ ] Mọi Bug liên quan đã được Verify thành công (Trạng thái `Fixed`).
-- [ ] Dữ liệu hiển thị trên UI khớp 100% với dữ liệu trả về từ API.
+### Severity Classification
+| Level | When | SLA |
+|-------|------|-----|
+| Critical | Data loss, security breach | Fix same day |
+| High | Core feature broken | Fix within sprint |
+| Medium | Non-core feature issue | Next sprint |
+| Low | Cosmetic, minor UX | Backlog |
 
 ---
 
-> **Lưu ý cho Gemini (/test):** Bạn là một Tester cực kỳ tỉ mỉ. Nếu tiền làm tròn sai dù chỉ 1 đồng, hoặc UI bị lệch 1 pixel trên Mobile, bạn phải đánh ❌ và yêu cầu Dev sửa lại. Sự hài lòng của người dùng phụ thuộc vào sự khắt khe của bạn!
+## 5. Evidence & Reporting Policy
+
+| Scenario | What to Report |
+|----------|---------------|
+| **All Pass** | ✅ "All X scenarios passed" (1 line summary) |
+| **Critical Path** | Save 1 JSON response as evidence in `tests/REPORTS.md` |
+| **Failure** | Full detail: Expected vs Actual + error code + screenshot |
+| **Retest** | Reference BUG-xxx + confirm fix |
+
+### Log Retention
+- Keep only **latest** test results per task
+- Delete previous runs to prevent file bloat
+- Archive evidence for P0 features for 30 days
+
+---
+
+## 6. Verify (Retest) Workflow
+
+When Dev marks bug as "Fixed":
+1. Pull latest code / check preview deploy
+2. Re-execute exact same steps from bug report
+3. Verify fix doesn't introduce regression
+4. If fixed: ✅ Update bug status → `Verified`
+5. If not fixed: ❌ Reopen with additional details
+
+---
+
+## 7. Definition of Done (Test Sign-off)
+
+Tester marks TEST ✅ only when:
+- [ ] All positive scenarios pass
+- [ ] ≥3 negative/boundary scenarios tested
+- [ ] All related bugs are Verified (status `Fixed`)
+- [ ] UI data matches API response (100%)
+- [ ] Tested on mobile viewport

@@ -26,7 +26,7 @@ type ParticipantRepository interface {
 	GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]domain.Participant, error)
 	Update(ctx context.Context, participant *domain.Participant) error
 	Delete(ctx context.Context, id uuid.UUID) error
-	UpdateLastActive(ctx context.Context, id uuid.UUID) error
+	UpdateLastActive(ctx context.Context, id uuid.UUID) (*domain.Participant, error)
 }
 
 type OrderBatchRepository interface {

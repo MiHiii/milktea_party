@@ -128,11 +128,33 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   }, [initialSession, initialParticipants])
 
   // 2. WebSocket & Realtime Sync
+  const fetchLatestData = useCallback(async () => {
+    try {
+      const [s, p, i, b] = await Promise.all([
+        api.sessions.getBySlug(session.slug),
+        api.participants.listBySession(session.id),
+        api.orderItems.listBySession(session.id),
+        api.orderBatches.listBySession(session.id)
+      ])
+      setSession(s)
+      setParticipants(p)
+      setOrderItems(i)
+      setOrderBatches(b)
+    } catch (e) {
+      console.error('Failed to re-sync data:', e)
+    }
+  }, [session.id, session.slug])
+
   useEffect(() => {
     if (!mounted) return
 
     const ws = createWS(session.id)
     
+    ws.onopen = () => {
+      // Re-sync data when connection is established/re-established
+      fetchLatestData()
+    }
+
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data)
@@ -144,6 +166,9 @@ export default function SessionClient({ initialSession, initialParticipants, ini
             break
           case 'participant_created':
             setParticipants(prev => prev.some(p => p.id === payload.id) ? prev : [...prev, payload])
+            break
+          case 'participant_updated':
+            setParticipants(prev => prev.map(p => p.id === payload.id ? { ...p, ...payload } : p))
             break
           case 'order_item_created':
             setOrderItems(prev => prev.some(i => i.id === payload.id) ? prev : [...prev, payload])

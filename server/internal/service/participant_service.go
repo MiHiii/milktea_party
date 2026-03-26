@@ -48,8 +48,9 @@ func (s *participantService) UpdateLastActive(ctx context.Context, id uuid.UUID)
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	err := s.repo.UpdateLastActive(ctx, id)
-	// We don't always need to broadcast heartbeat to save bandwidth, 
-	// or we can broadcast a smaller payload.
+	p, err := s.repo.UpdateLastActive(ctx, id)
+	if err == nil && p != nil {
+		s.hub.Broadcast(p.SessionID.String(), "participant_updated", p)
+	}
 	return err
 }

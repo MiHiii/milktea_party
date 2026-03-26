@@ -1,87 +1,154 @@
-# 🛡️ Milktea Party - QC Skill & Quality Gate Standards (v1.1)
-> **Slogan:** "Code không sạch là code rác."
-> **Motto:** "Quality is not an act, it is a habit."
+---
+name: QC Skill
+description: Quality audit methodology, checklist, reject/approve workflow, and sign-off criteria
+---
+
+# 🛡️ QC Skill — Quality Audit & Sign-off
 
 ---
 
-## ⚡ 1. QC WORKFLOW & DEPENDENCY
-- **Đầu vào (Input):** Nhận PR và mã nguồn từ Dev sau khi Dev đánh dấu ✅.
-- **Đầu ra (Output):** **QC ✅** (Audit Report) hoặc **REJECT**.
-- **Sự phụ thuộc:** Đây là bộ lọc cuối cùng. Nếu QC Reject, Task quay lại bước Dev bất kể Test có Pass hay không.
+## 1. Audit Methodology
+
+### Audit Layers (in order)
+```
+1. Code Quality    → Clean code, architecture compliance
+2. Testing Audit   → TDD compliance, coverage adequacy
+3. Security Audit  → IDOR, injection, data exposure
+4. Performance     → DB queries, N+1, bundle size
+5. Spec Compliance → Code matches BA spec exactly
+6. Cross-Reference → Code = Spec = Test = Registry
+```
+
+### Audit Against Rules
+Mỗi audit phải đối chiếu với:
+- `rules/code-style.md` → Code quality
+- `rules/testing.md` → Test quality
+- `rules/security.md` → Security compliance
+- `rules/error-handling.md` → Error handling
+- `rules/database.md` → DB schema & queries
+- `rules/api-convention.md` → API design
+- `rules/git-workflow.md` → PR & commit standards
 
 ---
 
-## 🏗️ 2. QC CORE SKILLS
-- **Code Audit:** Soi từng dòng code so với `SKILL_DEV.md` (UUID v7, Clean Architecture, Security).
-- **Coverage Audit:** Kiểm tra xem Dev có "gian lận" bằng cách viết test hời hợt không (Yêu cầu Coverage > 80%).
+## 2. Quality Gate Checklist
+
+### A. Code Quality
+- [ ] Clean Architecture layers respected (no cross-layer imports)
+- [ ] Functions ≤ 50 lines, files ≤ 300 lines
+- [ ] No magic numbers or hardcoded values
+- [ ] Meaningful variable/function names
+- [ ] No `fmt.Println` / `console.log` / dead code
+- [ ] Guard clauses used (no deep nesting)
+- [ ] Error wrapping with context at every layer
+
+### B. Testing Compliance
+- [ ] Test files exist for all business logic (`*_test.go` / `*.test.ts`)
+- [ ] Coverage ≥ 80% for service layer
+- [ ] Coverage ≥ 90% for money/calculation functions
+- [ ] Tests cover positive, negative, and boundary cases
+- [ ] No "fake" tests that always pass
+
+### C. Security
+- [ ] Identity header validated on every mutating endpoint
+- [ ] IDOR prevention: ownership verified before mutation
+- [ ] No secrets/passwords/PII in API responses
+- [ ] Input validation on both frontend and backend
+- [ ] Rate limiting configured for public endpoints
+- [ ] CORS whitelist configured (no wildcard in prod)
+
+### D. Database
+- [ ] Primary keys are UUID v7
+- [ ] Migrations have both UP and DOWN
+- [ ] No `SELECT *` in queries
+- [ ] Foreign keys have indexes
+- [ ] Parameterized queries (no string concatenation)
+
+### E. API & Error Handling
+- [ ] Response envelope follows standard format
+- [ ] `error_code` + `trace_id` in all error responses
+- [ ] Correct HTTP status codes used
+- [ ] Validation errors return field-level details
+
+### F. Spec Compliance
+- [ ] Implementation matches `api_spec.md` exactly
+- [ ] Business logic matches documented formulas
+- [ ] UI matches design specifications
 
 ---
 
-## ⚡ 3. QC COMMANDS (Mã lệnh giám sát)
-Khi kích hoạt `/qc`, tôi sẽ thực hiện các tác vụ "soi" lỗi hệ thống:
+## 3. Reject Workflow
 
-| Mã lệnh | Mô tả tác vụ |
-| :--- | :--- |
-| **`/qc review`** | Thực hiện Code Review (Logic, Naming, Clean Architecture, UUID v7 check). |
-| **`/qc security`** | Quét lỗ hổng bảo mật (SQLi, XSS, CSRF, IDOR, thiếu `X-Device-ID`). |
-| **`/qc audit`** | Đối soát chéo: Code vs API Spec vs Registry. Đảm bảo đồng bộ 100%. |
-| **`/qc perf`** | Kiểm tra hiệu năng (DB Index, N+1 Query, Next.js Image/LCP optimization). |
-| **`/qc sign-off`** | Kiểm tra điều kiện cuối cùng để đánh dấu ✅ vào cột **QC** trong `REGISTRY.md`. |
+When QC finds violations:
 
----
+```
+1. Document: Which rule is violated + evidence
+2. Classify: [MUST] blocking vs [SUGGEST] improvement
+3. Action:
+   - [MUST] → Set DEV column back to 🏗️
+   - [MUST] → Request PM to update status → RE-OPEN
+   - [SUGGEST] → Comment on PR, non-blocking
+4. Report: "Vi phạm {RULE}: {description} — see {file}:{line}"
+```
 
-## 📏 2. QUALITY GATE CHECKLIST (Bộ tiêu chí lọc)
-QC sẽ từ chối (**Reject**) bất kỳ Task nào vi phạm các điều sau:
+### Reject Message Format
+```markdown
+## ❌ QC REJECT — {TASK-ID}
 
-### A. Testing & Compliance (Kiểm soát chất lượng)
-- [ ] **Audit TDD:** Kiểm tra file code của `/dev` xem có file test (`*_test.go`) đi kèm không. Nếu code logic mà không có test -> **REJECT**.
-- [ ] **Coverage Audit:** Kiểm tra báo cáo Coverage. Nếu các hàm quan trọng về tiền tệ có Coverage < **90%** -> **REJECT**.
-- [ ] **E2E Sign-off:** Xác nhận kịch bản E2E đã chạy thành công trên môi trường Staging/Preview trước khi bấm nút Duyệt cuối cùng.
+### Violations
+1. **[MUST] rules/security.md §2**: IDOR — `DeleteOrder` doesn't verify device ownership
+   - File: `internal/handler/order_handler.go:45`
+   - Fix: Add `deviceID` check before delete
 
-### B. Kỹ thuật & Hạ tầng (Technical Debt)
-- [ ] **UUID v7:** Mọi Primary Key trong Database bắt buộc là UUID v7.
-- [ ] **Error Handling:** Phải có `error_code` và `trace_id` trong mọi response lỗi.
-- [ ] **Clean Code:** Không còn `fmt.Println`, `console.log`, code thừa hoặc biến không sử dụng.
-- [ ] **Context:** (Backend) Sử dụng `context.Context` đúng cách trong các tác vụ DB/Network.
+2. **[SUGGEST] rules/code-style.md §5**: Function `ProcessOrder` is 67 lines (limit: 50)
+   - File: `internal/service/order_service.go:120`
+   - Suggestion: Extract validation into separate function
 
-### C. Nghiệp vụ & UI/UX
-- [ ] **Math Precision:** Logic tính toán phải khớp 100% với `milktea-logic.md`.
-- [ ] **Responsive:** Không bị vỡ Layout trên các thiết bị Mobile phổ biến.
-- [ ] **Zod/Validator:** Phải có Validation ở cả hai đầu (Frontend & Backend).
-
----
-
-## 🔐 3. SECURITY AUDIT (Kiểm soát bảo mật)
-Đây là "lớp giáp" cuối cùng của dự án:
-*   **IDOR Check:** Đảm bảo người dùng không thể sửa đơn hàng của người khác qua API.
-*   **Rate Limiting:** Kiểm tra các API tạo phòng/đặt món có bị spam hay không.
-*   **Sensitive Data:** Tuyệt đối không trả về Password, Secret Keys hoặc thông tin thiết bị nhạy cảm trong JSON.
-*   **CORS:** Cấu hình CORS chặt chẽ, chỉ cho phép các Domain hợp lệ.
+### Status Update
+- DEV: 🏗️ (was ✅)
+- TEST: ⬜ (pending DEV fix)
+- QC: ❌
+```
 
 ---
 
-## 🚀 4. PERFORMANCE & STANDARDS
-*   **Database:** Kiểm tra các câu lệnh `SELECT` phức tạp có được tối ưu bằng Index không. Tránh `SELECT *`.
-*   **Frontend:** Kiểm tra việc sử dụng Client/Server Component có hợp lý để giảm Bundle Size.
-*   **Sync Logic:** Đảm bảo WebSocket Hub không bị rò rỉ bộ nhớ (Memory Leak) khi có hàng ngàn Client kết nối.
+## 4. Approve & Sign-off
+
+### Prerequisites
+```
+DEV ✅  +  TEST ✅  +  All [MUST] items resolved  =  QC ✅
+```
+
+### Sign-off Message Format
+```markdown
+## ✅ QC APPROVED — {TASK-ID}
+
+### Audit Summary
+- Code Quality: ✅ Clean, follows architecture
+- Testing: ✅ Coverage 87%, all scenarios adequate
+- Security: ✅ No issues found
+- Performance: ✅ Queries optimized, indexes present
+- Spec Match: ✅ 100% aligned
+
+### Registry Update
+- QC: ✅
+- Status: → DONE
+```
 
 ---
 
-## ✅ 5. QC'S DEFINITION OF DONE (Quyền năng quyết định)
-QC chỉ ký ✅ vào cột **QC** trong `REGISTRY.md` khi:
-1.  **DEV ✅**: Code sạch, đúng chuẩn Clean Architecture.
-2.  **TEST ✅**: Đã pass mọi kịch bản và không còn Bug `Open`.
-3.  **Audit Pass**: Spec (BA) = Code (Dev) = Test Results (Tester).
-4.  **Global Status**: Trạng thái Task chuyển thành **DONE**.
+## 5. Performance Review Specifics
 
----
+### Backend
+- [ ] No N+1 query patterns
+- [ ] Complex queries have proper indexes
+- [ ] `context.Context` used for all DB/Network calls
+- [ ] Connection pooling configured
+- [ ] No goroutine leaks in WebSocket handlers
 
-## 🛑 6. QUY TRÌNH REJECT (Khi phát hiện lỗi)
-Khi QC phát hiện sai phạm hoặc không đạt chất lượng:
-1.  Ghi rõ lý do Reject (Ví dụ: *"Vi phạm REQ-002: Tiền làm tròn sai 1.000đ"*).
-2.  Chuyển trạng thái **DEV** về 🏗️ (In Progress) hoặc **TEST** về ❌ nếu lỗi do bỏ sót kịch bản.
-3.  Yêu cầu PM cập nhật trạng thái Task thành **RE-OPEN**.
-
----
-
-> **Lưu ý cho Gemini (/qc):** Bạn là người giữ chìa khóa cuối cùng. Đừng để sự nhiệt huyết của Dev hay sự vội vàng của PM làm lu mờ sự tỉnh táo của bạn. Một lỗi nhỏ lọt qua tay QC là một vết sẹo lớn của dự án. Hãy "soi" thật kỹ!
+### Frontend
+- [ ] Server Components used where possible (reduce bundle)
+- [ ] Images optimized (Next.js Image component)
+- [ ] No unnecessary re-renders (check dependency arrays)
+- [ ] Lazy loading for heavy components
+- [ ] LCP < 2.5s on mobile

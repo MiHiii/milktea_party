@@ -1,70 +1,125 @@
-# 📑 Milktea Party - PM & Agile Master Standards (v2.0)
-> **Slogan:** "Không có ID Registry, không được phép Code."
-> **Motto:** "Inspect and Adapt. If it's not in the Sprint, it's not the priority."
+---
+name: PM Skill
+description: Sprint management methodology, registry standards, and task lifecycle
+---
+
+# 📑 PM Skill — Sprint Management & Registry
 
 ---
 
-## ⚡ 1. PM & AGILE COMMANDS (Mã lệnh điều hành)
-- **Đầu vào (Input):** Nhận Spec, Logic và AC hoàn chỉnh từ BA.
-- **Đầu ra (Output):** ID Task (`FEAT-xxx`, `API-xxx`) trong `REGISTRY.md`.
-- **Sự phụ thuộc:** Dev chỉ được checkout branch khi PM đã cấp ID và Set trạng thái là `TODO`.
+## 1. Registry Management (`docs/REGISTRY.md`)
+
+### Task ID Format
+| Type | Format | Example |
+|------|--------|---------|
+| Feature | `FEAT-xxx` | `FEAT-005` |
+| API endpoint | `API-xxx` | `API-012` |
+| Bug fix | `BUG-xxx` | `BUG-003` |
+| Refactor | `REFAC-xxx` | `REFAC-001` |
+| DevOps | `OPS-xxx` | `OPS-002` |
+
+### Registry Table Format
+```markdown
+| ID | Description | Priority | Sprint | DEV | TEST | QC | Status |
+|----|-------------|----------|--------|-----|------|-----|--------|
+| FEAT-005 | Calculate shipping | P0 | S3 | ✅ | ✅ | ✅ | DONE |
+| API-012 | Settlement endpoint | P1 | S3 | 🏗️ | ⬜ | ⬜ | IN_PROGRESS |
+```
+
+### Status Flow
+```
+BACKLOG → SPRINT BACKLOG → IN_PROGRESS → IN_TESTING → IN_REVIEW → DONE
+                                ↑                          ↓
+                                └────── RE-OPEN ←──────────┘
+```
 
 ---
 
-## 🏗️ 2. PM CORE SKILLS
-- **Backlog Grooming:** Chia nhỏ REQ của BA thành các Task kỹ thuật cực nhỏ (Atomic Tasks).
-- **Final Gatekeeper:** Là người duy nhất có quyền Merge PR sau khi đã có đủ 3 dấu ✅ từ Dev, Test, QC.
+## 2. Sprint Lifecycle
+
+### Sprint Duration
+- Default: 2 weeks
+- Ceremony schedule:
+  - **Day 1**: Sprint Planning
+  - **Day 1–10**: Development + Daily Standup (15 min/day)
+  - **Day 8**: Backlog Grooming (prep next sprint)
+  - **Day 10**: Sprint Review + Retrospective
+
+### Sprint Planning Process
+1. PM chọn tasks từ Backlog dựa trên priority (P0 > P1 > P2)
+2. Dev confirm capacity (trừ PTO, meetings)
+3. Tổng story points ≤ 80% team capacity
+4. Sprint Goal phải measurable
+5. Mọi task đã pass DoR
+
+### Backlog Grooming
+- 3 ngày trước Sprint Planning
+- Tasks > 8 points phải tách nhỏ
+- Clarify AC với BA nếu thiếu
+- Estimate bằng story points (Fibonacci: 1, 2, 3, 5, 8, 13)
 
 ---
 
-## 🌀 3. SPRINT LIFECYCLE (Vòng đời Sprint)
+## 3. Definition of Ready (DoR)
 
-Dự án Milktea Party vận hành theo Sprint (mặc định 1-2 tuần):
-
-1.  **Sprint Planning**: PM chọn Task từ Product Backlog dựa trên độ ưu tiên (P0 > P1 > P2) và Capacity của Dev.
-2.  **Daily Execution**: `/dev` thực hiện Task. PM theo dõi trạng thái qua bảng Registry.
-3.  **Sprint Review**: Kiểm tra sản phẩm demo (thông qua kết quả của `/test` và `/qc`).
-4.  **Sprint Retrospective**: Rút kinh nghiệm về quy trình làm việc.
-
----
-
-## 🏗️ 3. REGISTRY & SPRINT MANAGEMENT
-
-PM duy trì bảng trạng thái trong `REGISTRY.md` với cột **Sprint** bổ sung để quản lý lộ trình.
-
-### Trạng thái Task trong Agile:
-*   **`BACKLOG`**: Task đã định danh nhưng chưa được đưa vào Sprint nào.
-*   **`SPRINT BACKLOG`**: Task đã được chọn cho Sprint hiện tại.
-*   **`IN_PROGRESS`**: Dev đang code.
-*   **`IN_TESTING` / `IN_REVIEW`**: Đang kiểm thử/QC.
-*   **`DONE`**: Hoàn tất 100% (DEV ✅, TEST ✅, QC ✅).
+Task chỉ được vào Sprint khi:
+- [ ] Có ID trong Registry
+- [ ] Liên kết với REQ/FEAT ref
+- [ ] BA đã hoàn thành Spec + AC
+- [ ] Priority đã xác định (P0/P1/P2)
+- [ ] Estimate ≤ 8 story points
+- [ ] Không có dependency chưa resolved
 
 ---
 
-## ✅ 4. DEFINITION OF READY (DoR) & DONE (DoD)
+## 4. Definition of Done (DoD)
 
-### DoR (Điều kiện để bắt đầu Task):
-1. Có ID định danh và liên kết với REQ Ref.
-2. BA đã hoàn thành Spec tương ứng.
-3. Độ ưu tiên đã được xác định.
+Task chỉ DONE khi cả 3 cột ✅:
+1. **DEV ✅**: Code pass lint, fmt, unit tests pass 100%
+2. **TEST ✅**: Test cases executed, ≥3 scenarios pass, no open bugs
+3. **QC ✅**: Code audit pass, security check OK
 
-### DoD (Điều kiện để kết thúc Task):
-1. **DEV ✅**: Code pass lint, fmt, đúng chuẩn kiến trúc. **TDD Required**: Task chỉ được tính là hoàn tất phần DEV khi có bộ Unit Test đi kèm và tỷ lệ Pass là 100%.
-2. **TEST ✅**: Đã có test script và pass ít nhất 3 kịch bản. **E2E Validation**: Các tính năng P0 (Cốt lõi) phải vượt qua kịch bản E2E toàn trình trước khi đóng Task.
-3. **QC ✅**: Security check OK, UI/UX match 100%. **Registry Tracking**: Cập nhật cột TEST dựa trên kết quả chạy E2E tự động hoặc thủ công.
-4. **Global Status**: Chuyển thành **DONE**.
+→ PM chuyển Status thành **DONE**
 
 ---
 
-## 📈 5. VELOCITY & CAPACITY (Năng lực đội ngũ)
-*   PM theo dõi số lượng Task hoàn thành mỗi Sprint để điều chỉnh khối lượng công việc cho Sprint sau.
-*   Ưu tiên **P0 (Critical)** luôn được xử lý trong Sprint hiện tại.
+## 5. Priority Classification
+
+| Level | Label | SLA | When |
+|:-----:|-------|-----|------|
+| P0 | Critical | Within current sprint | Core feature, data integrity, security |
+| P1 | High | Next 1–2 sprints | Important feature, major UX issue |
+| P2 | Medium | Backlog (prioritized) | Nice-to-have, optimization |
+| P3 | Low | Backlog (unprioritized) | Cosmetic, minor improvement |
 
 ---
 
-## 🐞 6. QUY TRÌNH XỬ LÝ BUG TRONG SPRINT
-*   Lỗi phát hiện trong Sprint (`BUG-xxx`) phải được xử lý ngay lập tức (P0) để đảm bảo DoD của Task liên quan.
-*   Nếu lỗi quá lớn không thể sửa kịp, Task liên quan sẽ bị loại khỏi Sprint và chuyển về Backlog.
+## 6. Bug Triage in Sprint
+
+### Bug Tracker Format
+```markdown
+| Bug ID | Related Task | Description | Severity | Status |
+|--------|-------------|-------------|----------|--------|
+| BUG-001 | API-005 | Negative qty accepted | High | Open |
+```
+
+### Triage Rules
+- **P0 bug** in Sprint → Fix immediately, same Sprint
+- **P0 bug** too large → Remove related task from Sprint, move to Backlog
+- **P1/P2 bugs** → Add to next Sprint Backlog
+- Bug fixer reports back to Tester for verify
 
 ---
-*Ghi chú cho PM: Hãy giữ kỷ luật Scrum chặt chẽ. Không cho phép thay đổi phạm vi (Scope creep) giữa chừng khi Sprint đang chạy.*
+
+## 7. Velocity & Reporting
+
+### Metrics to Track
+- **Velocity**: Story points completed per Sprint
+- **Commitment accuracy**: Points committed vs completed (target ≥ 80%)
+- **Bug escape rate**: Bugs found in production vs total bugs (target < 5%)
+- **Sprint burndown**: Daily progress tracking
+
+### Capacity Planning
+- Use average velocity from last 3 sprints
+- Deduct 20% for tech debt, bugs, unexpected
+- Never commit more than actual capacity
