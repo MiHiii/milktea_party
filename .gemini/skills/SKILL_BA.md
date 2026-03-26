@@ -9,10 +9,39 @@ description: Business analysis methodology, spec writing standards, and hand-off
 
 ## 1. Spec Writing Methodology
 
-### API Specification (`docs/api_spec.md`)
-Mỗi endpoint được document theo format:
+### API Specification — Structure Strategy
+Khi dự án lớn lên, file `api_spec.md` sẽ quá dài (>500 lines). BA phải **chủ động tách** thành modules:
 
+```
+docs/
+├── api_spec.md                    # Index file — liệt kê tất cả modules
+└── specs/
+    └── api/                       # Module files
+        ├── session.md             # Session endpoints
+        ├── participant.md         # Participant endpoints
+        ├── order.md               # Order endpoints
+        └── settlement.md         # Settlement endpoints
+```
+
+### `api_spec.md` — Index File Format (khi đã tách)
 ```markdown
+# API Specification — Index
+| Module | Endpoints | File |
+|--------|-----------|------|
+| Session | Create, Get, Update, Delete | [session.md](specs/api/session.md) |
+| Participant | Join, Leave, Heartbeat | [participant.md](specs/api/participant.md) |
+| Order | Add, Update, Delete, Batch | [order.md](specs/api/order.md) |
+| Settlement | Calculate, VietQR, Confirm | [settlement.md](specs/api/settlement.md) |
+```
+
+### Module File Format (mỗi file)
+```markdown
+# {Module Name} API
+> Owner: BA | Last Updated: {date}
+> Related Tasks: REQ-xxxxx, FEAT-xxxxx
+
+## Endpoints
+
 ### [METHOD] /api/v1/{resource}
 - **Description**: What this endpoint does
 - **Auth**: Required headers
@@ -31,12 +60,20 @@ Mỗi endpoint được document theo format:
   | `RESOURCE_NOT_FOUND` | ... |
 ```
 
+### Khi nào tách spec?
+| Trigger | Action |
+|---------|--------|
+| `api_spec.md` > 300 lines | Bắt đầu tách module đầu tiên |
+| > 5 resource domains | Mỗi domain = 1 module file |
+| Team > 3 devs | Tách để tránh merge conflicts |
+
 ### Checklist khi viết spec
 - [ ] Versioning rõ ràng (`/api/v1/...`)
 - [ ] Request/Response format đồng nhất (JSON envelope)
 - [ ] Error codes tuân thủ `rules/api-convention.md`
 - [ ] Security headers được định nghĩa
 - [ ] Pagination cho collection endpoints
+- [ ] Nếu > 300 lines, đã tách thành modules
 
 ---
 

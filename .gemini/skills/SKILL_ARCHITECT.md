@@ -144,7 +144,7 @@ What is the change we're making?
 ### Tech Debt Budget
 - **20% of sprint capacity** reserved for tech debt
 - Non-negotiable — engineering is a partner, not a factory
-- Track tech debt items in Registry with `REFAC-xxx` IDs
+- Track tech debt items in Registry with `REFAC-xxxxx` IDs
 - Prioritize: security debt > performance debt > code quality debt
 
 ### When to Raise the Alarm

@@ -122,7 +122,7 @@ Một Task chỉ được coi là hoàn tất (**DONE**) khi cả 3 cột trong 
 
 | Bug ID | Liên quan | Mô tả lỗi | Mức độ | Trạng thái |
 | :--- | :--- | :--- | :--- | :--- |
-| **BUG-001** | API-005 | Gửi số lượng âm (-) vẫn nhận đơn hàng | High | Open |
+| **BUG-00001** | API-00005 | Gửi số lượng âm (-) vẫn nhận đơn hàng | High | Open |
 
 ---
 

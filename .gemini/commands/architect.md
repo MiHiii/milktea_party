@@ -2,7 +2,7 @@
 
 ## /architect design {feature}
 - **Purpose**: Write Tech Design Document (TDD) cho feature lớn
-- **Input**: Feature name hoặc FEAT-xxx
+- **Input**: Feature name hoặc FEAT-xxxxx
 - **Output**: TDD document trong `/docs/tdd/`
 - **Example**: `/architect design FEAT-010` → "Design settlement system"
 

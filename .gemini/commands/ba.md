@@ -2,7 +2,7 @@
 
 ## /ba spec
 - **Purpose**: Tạo hoặc cập nhật API specification trong `docs/api_spec.md`
-- **Input**: Feature name hoặc REQ-xxx reference
+- **Input**: Feature name hoặc REQ-xxxxx reference
 - **Output**: Updated `docs/api_spec.md` với endpoints, request/response, error codes
 - **Rules**: Tuân thủ `rules/api-convention.md`
 - **Example**: `/ba spec` → "Viết spec cho feature settlement"

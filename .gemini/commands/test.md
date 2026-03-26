@@ -1,7 +1,7 @@
 # /test Commands
 
 ## /test cases
-- **Purpose**: Viết test cases (TEST-xxx) từ Acceptance Criteria
+- **Purpose**: Viết test cases (TEST-xxxxx) từ Acceptance Criteria
 - **Input**: Task ID hoặc feature spec
 - **Output**: Structured test cases (positive + negative + boundary)
 - **Example**: `/test cases FEAT-005` → "Viết test cases cho shipping"
@@ -33,11 +33,11 @@
 ## /test bug
 - **Purpose**: Report bug vào Registry bug tracker
 - **Input**: Bug details (steps, expected, actual)
-- **Output**: BUG-xxx entry trong `REGISTRY.md`
+- **Output**: BUG-xxxxx entry trong `REGISTRY.md`
 - **Example**: `/test bug` → "Report: negative qty accepted"
 
 ## /test verify
 - **Purpose**: Retest fixed bugs
-- **Input**: BUG-xxx ID
+- **Input**: BUG-xxxxx ID
 - **Output**: Verified ✅ hoặc Reopened ❌
-- **Example**: `/test verify BUG-003` → "Retest negative qty fix"
+- **Example**: `/test verify BUG-00003` → "Retest negative qty fix"

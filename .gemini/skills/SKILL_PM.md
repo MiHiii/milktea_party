@@ -12,18 +12,18 @@ description: Sprint management methodology, registry standards, and task lifecyc
 ### Task ID Format
 | Type | Format | Example |
 |------|--------|---------|
-| Feature | `FEAT-xxx` | `FEAT-005` |
-| API endpoint | `API-xxx` | `API-012` |
-| Bug fix | `BUG-xxx` | `BUG-003` |
-| Refactor | `REFAC-xxx` | `REFAC-001` |
-| DevOps | `OPS-xxx` | `OPS-002` |
+| Feature | `FEAT-xxxxx` | `FEAT-00005` |
+| API endpoint | `API-xxxxx` | `API-00012` |
+| Bug fix | `BUG-xxxxx` | `BUG-00003` |
+| Refactor | `REFAC-xxxxx` | `REFAC-00001` |
+| DevOps | `OPS-xxxxx` | `OPS-00002` |
 
 ### Registry Table Format
 ```markdown
 | ID | Description | Priority | Sprint | DEV | TEST | QC | Status |
 |----|-------------|----------|--------|-----|------|-----|--------|
-| FEAT-005 | Calculate shipping | P0 | S3 | ✅ | ✅ | ✅ | DONE |
-| API-012 | Settlement endpoint | P1 | S3 | 🏗️ | ⬜ | ⬜ | IN_PROGRESS |
+| FEAT-00005 | Calculate shipping | P0 | S3 | ✅ | ✅ | ✅ | DONE |
+| API-00012 | Settlement endpoint | P1 | S3 | 🏗️ | ⬜ | ⬜ | IN_PROGRESS |
 ```
 
 ### Status Flow
@@ -100,7 +100,7 @@ Task chỉ DONE khi cả 3 cột ✅:
 ```markdown
 | Bug ID | Related Task | Description | Severity | Status |
 |--------|-------------|-------------|----------|--------|
-| BUG-001 | API-005 | Negative qty accepted | High | Open |
+| BUG-00001 | API-00005 | Negative qty accepted | High | Open |
 ```
 
 ### Triage Rules
@@ -108,6 +108,9 @@ Task chỉ DONE khi cả 3 cột ✅:
 - **P0 bug** too large → Remove related task from Sprint, move to Backlog
 - **P1/P2 bugs** → Add to next Sprint Backlog
 - Bug fixer reports back to Tester for verify
+
+### Bug ID Format
+- 5-digit zero-padded: `BUG-00001`, `BUG-00002`, ...
 
 ---
 

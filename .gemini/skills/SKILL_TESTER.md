@@ -9,12 +9,12 @@ description: Test execution methodology, test case structure, bug reporting, and
 
 ## 1. Test Case Structure
 
-### Format bắt buộc cho mỗi `TEST-xxx`
+### Format bắt buộc cho mỗi `TEST-xxxxx`
 
 | Field | Description | Example |
 |-------|-------------|---------|
-| **ID** | `TEST-xxx` | `TEST-001` |
-| **Target** | Task/API being tested | `API-005` |
+| **ID** | `TEST-xxxxx` | `TEST-00001` |
+| **Target** | Task/API being tested | `API-00005` |
 | **Objective** | What is being validated | Calculate shipping with voucher |
 | **Precondition** | Initial state required | Session OPEN, ≥2 participants |
 | **Steps** | Numbered steps to execute | 1. Add item A (50k)... |
@@ -69,14 +69,14 @@ Open App → Create Session → Join → Order Items → Lock → Checkout → V
 ```markdown
 | Bug ID | Related | Description | Severity | Status |
 |--------|---------|-------------|----------|--------|
-| BUG-xxx | API-005 | Negative qty accepted | High | Open |
+| BUG-xxxxx | API-00005 | Negative qty accepted | High | Open |
 ```
 
 ### Bug Report Details (khi create)
 ```markdown
-## BUG-xxx: [Short description]
+## BUG-xxxxx: [Short description]
 - **Severity**: Critical / High / Medium / Low
-- **Related Task**: FEAT-xxx / API-xxx
+- **Related Task**: FEAT-xxxxx / API-xxxxx
 - **Environment**: Staging / Preview / Production
 
 ### Steps to Reproduce
@@ -111,7 +111,7 @@ Open App → Create Session → Join → Order Items → Lock → Checkout → V
 | **All Pass** | ✅ "All X scenarios passed" (1 line summary) |
 | **Critical Path** | Save 1 JSON response as evidence in `tests/REPORTS.md` |
 | **Failure** | Full detail: Expected vs Actual + error code + screenshot |
-| **Retest** | Reference BUG-xxx + confirm fix |
+| **Retest** | Reference BUG-xxxxx + confirm fix |
 
 ### Log Retention
 - Keep only **latest** test results per task
