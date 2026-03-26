@@ -68,6 +68,33 @@ func (r *postgresSessionRepository) GetByID(ctx context.Context, id uuid.UUID) (
 	return &s, nil
 }
 
+func (r *postgresSessionRepository) GetByIDForUpdate(ctx context.Context, id uuid.UUID) (*domain.Session, error) {
+	query := `
+		SELECT id, slug, room_id, title, host_device_id, shop_link, 
+		       host_default_bank_name, host_default_bank_account, host_default_qr_payload, 
+		       status, discount_type, discount_value, shipping_fee, 
+		       is_split_batch, use_default_qr_for_all, batch_configs, password, created_at
+		FROM sessions WHERE id = $1 FOR UPDATE`
+
+	var s domain.Session
+	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
+		&s.ID, &s.Slug, &s.RoomID, &s.Title, &s.HostDeviceID, &s.ShopLink,
+		&s.HostDefaultBankName, &s.HostDefaultBankAccount, &s.HostDefaultQrPayload,
+		&s.Status, &s.DiscountType, &s.DiscountValue, &s.ShippingFee,
+		&s.IsSplitBatch, &s.UseDefaultQrForAll, &s.BatchConfigs, &s.Password, &s.CreatedAt,
+	)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get session by id for update: %w", err)
+	}
+
+	s.HasPassword = s.Password != nil && *s.Password != ""
+	return &s, nil
+}
+
 func (r *postgresSessionRepository) GetBySlug(ctx context.Context, slug string) (*domain.Session, error) {
 	query := `
 		SELECT id, slug, room_id, title, host_device_id, shop_link, 

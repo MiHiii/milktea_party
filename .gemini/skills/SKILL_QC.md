@@ -1,11 +1,23 @@
 # 🛡️ Milktea Party - QC Skill & Quality Gate Standards (v1.1)
-
+> **Slogan:** "Code không sạch là code rác."
 > **Motto:** "Quality is not an act, it is a habit."
-> **Role:** Giám sát tuân thủ tiêu chuẩn kỹ thuật (`SKILL_DEV.md`) và nghiệp vụ (`SKILL_BA.md`). Thực hiện Code Review, kiểm tra bảo mật, hiệu năng và là người đưa ra quyết định Sign-off cuối cùng.
 
 ---
 
-## ⚡ 1. QC COMMANDS (Mã lệnh giám sát)
+## ⚡ 1. QC WORKFLOW & DEPENDENCY
+- **Đầu vào (Input):** Nhận PR và mã nguồn từ Dev sau khi Dev đánh dấu ✅.
+- **Đầu ra (Output):** **QC ✅** (Audit Report) hoặc **REJECT**.
+- **Sự phụ thuộc:** Đây là bộ lọc cuối cùng. Nếu QC Reject, Task quay lại bước Dev bất kể Test có Pass hay không.
+
+---
+
+## 🏗️ 2. QC CORE SKILLS
+- **Code Audit:** Soi từng dòng code so với `SKILL_DEV.md` (UUID v7, Clean Architecture, Security).
+- **Coverage Audit:** Kiểm tra xem Dev có "gian lận" bằng cách viết test hời hợt không (Yêu cầu Coverage > 80%).
+
+---
+
+## ⚡ 3. QC COMMANDS (Mã lệnh giám sát)
 Khi kích hoạt `/qc`, tôi sẽ thực hiện các tác vụ "soi" lỗi hệ thống:
 
 | Mã lệnh | Mô tả tác vụ |
@@ -21,13 +33,18 @@ Khi kích hoạt `/qc`, tôi sẽ thực hiện các tác vụ "soi" lỗi hệ 
 ## 📏 2. QUALITY GATE CHECKLIST (Bộ tiêu chí lọc)
 QC sẽ từ chối (**Reject**) bất kỳ Task nào vi phạm các điều sau:
 
-### A. Kỹ thuật & Hạ tầng (Technical Debt)
+### A. Testing & Compliance (Kiểm soát chất lượng)
+- [ ] **Audit TDD:** Kiểm tra file code của `/dev` xem có file test (`*_test.go`) đi kèm không. Nếu code logic mà không có test -> **REJECT**.
+- [ ] **Coverage Audit:** Kiểm tra báo cáo Coverage. Nếu các hàm quan trọng về tiền tệ có Coverage < **90%** -> **REJECT**.
+- [ ] **E2E Sign-off:** Xác nhận kịch bản E2E đã chạy thành công trên môi trường Staging/Preview trước khi bấm nút Duyệt cuối cùng.
+
+### B. Kỹ thuật & Hạ tầng (Technical Debt)
 - [ ] **UUID v7:** Mọi Primary Key trong Database bắt buộc là UUID v7.
 - [ ] **Error Handling:** Phải có `error_code` và `trace_id` trong mọi response lỗi.
 - [ ] **Clean Code:** Không còn `fmt.Println`, `console.log`, code thừa hoặc biến không sử dụng.
 - [ ] **Context:** (Backend) Sử dụng `context.Context` đúng cách trong các tác vụ DB/Network.
 
-### B. Nghiệp vụ & UI/UX
+### C. Nghiệp vụ & UI/UX
 - [ ] **Math Precision:** Logic tính toán phải khớp 100% với `milktea-logic.md`.
 - [ ] **Responsive:** Không bị vỡ Layout trên các thiết bị Mobile phổ biến.
 - [ ] **Zod/Validator:** Phải có Validation ở cả hai đầu (Frontend & Backend).

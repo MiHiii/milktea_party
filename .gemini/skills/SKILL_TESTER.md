@@ -1,11 +1,23 @@
 # 🧪 Milktea Party - Test Skill & Quality Assurance Standards (v1.1)
-
+> **Slogan:** "Bug là kẻ thù, E2E là vũ khí."
 > **Motto:** "Don't just test if it works, test how it fails."
-> **Role:** Kiểm chứng chức năng dựa trên Spec của BA. Phát hiện lỗi, báo cáo Bug và xác nhận tính đúng đắn của logic nghiệp vụ trước khi bàn giao cho QC.
 
 ---
 
-## ⚡ 1. TEST COMMANDS (Mã lệnh kiểm thử)
+## ⚡ 1. TESTER WORKFLOW & DEPENDENCY
+- **Đầu vào (Input):** Nhận PR từ Dev và AC (Gherkin Scenarios) từ BA.
+- **Đầu ra (Output):** **TEST ✅** trong Registry hoặc **BUG-xxx**.
+- **Sự phụ thuộc:** QC có thể duyệt song song, nhưng PM chỉ Merge khi Test đã xác nhận "Green".
+
+---
+
+## 🏗️ 2. CORE SKILLS
+- **E2E Automation:** Triển khai test trên môi trường Preview của nhánh Feature.
+- **Bug Lifecycle:** Khi phát hiện lỗi, phải cập nhật `REGISTRY.md` và chuyển trạng thái Task về `RE-OPEN`.
+
+---
+
+## ⚡ 3. TEST COMMANDS (Mã lệnh kiểm thử)
 Khi kích hoạt `/test`, tôi sẽ thực hiện các tác vụ sau:
 
 | Mã lệnh | Mô tả tác vụ |
@@ -35,16 +47,21 @@ Mỗi kịch bản `TEST-xxx` phải được trình bày theo bảng:
 
 ## 🔍 3. TESTING SCOPE (Phạm vi kiểm thử)
 
-### A. Functional & Logic (Chức năng & Toán học)
+### A. E2E Automation (Kiểm thử toàn trình)
+*   **E2E Scenarios:** Xây dựng kịch bản kiểm thử toàn trình mô phỏng hành trình người dùng: Mở app -> Tạo Session -> Đặt món -> Chốt đơn -> Kiểm tra QR.
+*   **Tooling:** Sử dụng **Playwright** hoặc **Cypress** để thực hiện E2E trên trình duyệt.
+*   **Data Consistency:** Kiểm tra dữ liệu cuối cùng trong PostgreSQL phải khớp chính xác với những gì hiển thị trên giao diện sau khi kết thúc luồng E2E.
+
+### B. Functional & Logic (Chức năng & Toán học)
 *   **Math Logic:** Kiểm tra tiền thanh toán cuối cùng có luôn làm tròn đến 1.000 VNĐ (Theo `milktea-logic.md`).
 *   **Allocation:** Phí ship, phí dịch vụ phải được chia đúng tỷ lệ % giá trị món ăn.
 *   **Voucher:** Kiểm tra Voucher giảm giá món vs Voucher giảm phí ship.
 
-### B. Real-time Synchronization (Đồng bộ tức thời)
+### C. Real-time Synchronization (Đồng bộ tức thời)
 *   **WebSocket:** Đảm bảo khi máy A thêm món, máy B thấy ngay lập tức mà không cần F5.
 *   **Conflict:** Hai người cùng bấm "Chốt đơn" cùng lúc thì hệ thống xử lý thế nào?
 
-### C. Negative & Boundary (Trường hợp biên & Sai)
+### D. Negative & Boundary (Trường hợp biên & Sai)
 *   **Input:** Nhập số lượng món là 0, số âm, hoặc ký tự đặc biệt.
 *   **Network:** Ngắt mạng giữa chừng khi đang bấm "Thanh toán".
 *   **Security:** Thử thay đổi `X-Device-ID` để sửa món của người khác (IDOR check).

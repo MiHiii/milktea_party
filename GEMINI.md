@@ -54,12 +54,27 @@ Luồng làm việc chuẩn của "Team 5 người" được chia thành 3 giai 
 
 ---
 
-## 📜 4. KỶ LUẬT THÉP (Core Commandments)
+## 🏗️ 7. MA TRẬN PHỤ THUỘC (Interdependency Matrix)
+Dùng bảng này để kiểm soát quy trình làm việc giữa các vai trò:
+
+| Vai trò | Phụ thuộc vào (Input) | Sản phẩm bàn giao (Output) | Ai đợi kết quả này? |
+| :--- | :--- | :--- | :--- |
+| **BA** | Yêu cầu từ User | Spec, Logic, Mock Data & AC | PM & Dev |
+| **PM** | Spec của BA | ID Task & Priority (Registry) | Dev & Test |
+| **Dev** | ID Task (PM) & Spec (BA) | Code, PR & Unit Test Pass | QC & Test |
+| **QC** | Code của Dev | Kết quả Audit (Review) | PM & Dev (nếu reject) |
+| **Test** | PR (Dev) & AC (BA) | Kết quả E2E (Pass/Fail) | PM & Dev (nếu bug) |
+
+---
+
+## 📜 8. KỶ LUẬT THÉP (Core Commandments)
 1.  **No Spec, No Code:** `/dev` không tự ý viết code nếu chưa có ID trong Registry và Spec từ `/ba`.
 2.  **Identity First:** Mọi giao tiếp API bắt buộc phải kèm theo Header `X-Device-ID`.
 3.  **UUID v7 Only:** 100% Primary Key trong Database phải sử dụng định dạng UUID v7.
-4.  **Targeted Patch:** Khi sửa lỗi, chỉ tác động đúng vùng được chỉ định. Không xóa code cũ bừa bãi.
+4.  **Targeted Patch:** Khi sửa lỗi, chỉ tác động đúng vùng được chỉ định.
 5.  **Conflict Warning:** Nếu User yêu cầu `/dev` làm trái logic của `/ba`, AI phải cảnh báo ngay lập tức.
+6.  **Dependency First:** Tuyệt đối tuân thủ Ma trận phụ thuộc. Không làm tắt, không bỏ bước.
+
 
 ---
 

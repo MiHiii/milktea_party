@@ -25,6 +25,28 @@ func NewSessionService(repo repository.SessionRepository, participantRepo reposi
 	return &sessionService{repo: repo, participantRepo: participantRepo, hub: hub}
 }
 
+var validTransitions = map[string][]string{
+	domain.SessionStatusOpen:      {domain.SessionStatusLocked, domain.SessionStatusCancelled},
+	domain.SessionStatusLocked:    {domain.SessionStatusOpen, domain.SessionStatusOrdered, domain.SessionStatusCancelled},
+	domain.SessionStatusOrdered:   {domain.SessionStatusSettling},
+	domain.SessionStatusSettling:  {domain.SessionStatusCompleted},
+	domain.SessionStatusCompleted: {},
+	domain.SessionStatusCancelled: {},
+}
+
+func validateTransition(from, to string) error {
+	if from == to {
+		return nil
+	}
+	allowed := validTransitions[from]
+	for _, s := range allowed {
+		if s == to {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid transition from %s to %s", from, to)
+}
+
 const roomIDCharset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 func generateRoomID(length int) string {
@@ -108,7 +130,15 @@ func (s *sessionService) Update(ctx context.Context, session *domain.Session) er
 	defer cancel()
 
 	// 1. Fetch existing session
-	existing, err := s.repo.GetByID(ctx, session.ID)
+	// If transitioning to Settling, use FOR UPDATE for pessimistic locking
+	var existing *domain.Session
+	var err error
+	if session.Status == domain.SessionStatusSettling {
+		existing, err = s.repo.GetByIDForUpdate(ctx, session.ID)
+	} else {
+		existing, err = s.repo.GetByID(ctx, session.ID)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -116,7 +146,14 @@ func (s *sessionService) Update(ctx context.Context, session *domain.Session) er
 		return fmt.Errorf("session not found")
 	}
 
-	// 2. Merge values: Only update if the new value is NOT empty/zero
+	// 2. Validate Status Transition
+	if session.Status != "" && session.Status != existing.Status {
+		if err := validateTransition(existing.Status, session.Status); err != nil {
+			return err
+		}
+	}
+
+	// 3. Merge values: Only update if the new value is NOT empty/zero
 	if session.Title == "" {
 		session.Title = existing.Title
 	}
