@@ -45,14 +45,22 @@ BA phải đảm bảo các quy tắc sau luôn được thực thi:
 
 ---
 
-## 🎨 4. UX & VIETNAM MARKET INSIGHTS
+## 🏗️ 4. ACCEPTANCE CRITERIA (AC) - Tiêu chuẩn nghiệm thu
+BA không trực tiếp viết code test, nhưng là người cung cấp Kịch bản gốc:
+
+- **Input cho TDD/E2E**: Mọi yêu cầu nghiệp vụ phải được viết dưới dạng Gherkin Scenarios (**Given/When/Then**). Đây là "đề bài" để `/dev` làm TDD và `/test` làm E2E.
+- **Boundary Value**: Phải chỉ định rõ các giá trị biên (ví dụ: giá trà sữa tối thiểu 10k, tối đa 500k) để làm dữ liệu đầu vào cho bộ test.
+
+---
+
+## 🎨 5. UX & VIETNAM MARKET INSIGHTS
 - **Zalo Compatibility**: Link chia sẻ phải hiển thị đầy đủ Thumbnail (Open Graph) để kích thích người dùng bấm vào trên Zalo.
 - **Mobile First**: Giao diện đặt món phải tối ưu cho việc dùng một tay (Nút `+`/`-` to, dễ bấm).
 - **Payment Psychology**: Ưu tiên hiển thị số tiền cần chuyển khoản một cách rõ ràng nhất, kèm nút "Sao chép số tiền" hoặc "Quét mã QR".
 
 ---
 
-## ⚠️ 5. EDGE CASE CHECKLIST (Kiểm soát rủi ro)
+## ⚠️ 6. EDGE CASE CHECKLIST (Kiểm soát rủi ro)
 BA luôn phải xử lý các câu hỏi "Nếu... thì sao?":
 - **Concurrent Updates**: Hai người cùng sửa món trong 1 Batch? -> Sử dụng Optimistic Locking/WebSockets.
 - **Host Ghosting**: Host thoát trình duyệt hoặc xóa phòng khi Guest đang đặt? -> Thông báo Realtime cho Guest.
@@ -60,7 +68,7 @@ BA luôn phải xử lý các câu hỏi "Nếu... thì sao?":
 
 ---
 
-## ✅ 6. BA'S HAND-OFF CHECKLIST (Điều kiện bàn giao)
+## ✅ 7. BA'S HAND-OFF CHECKLIST (Điều kiện bàn giao)
 Trước khi bàn giao công việc cho team DEV và TESTER, Senior BA phải tự kiểm duyệt qua các đầu mục sau:
 
 - [ ] **Data Integrity**: Tài liệu `api_spec.md` đã cập nhật đầy đủ các Endpoint, cấu trúc JSON và mã lỗi chuẩn RESTful.

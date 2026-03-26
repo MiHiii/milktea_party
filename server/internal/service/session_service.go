@@ -25,6 +25,28 @@ func NewSessionService(repo repository.SessionRepository, participantRepo reposi
 	return &sessionService{repo: repo, participantRepo: participantRepo, hub: hub}
 }
 
+var validTransitions = map[string][]string{
+	domain.SessionStatusOpen:      {domain.SessionStatusLocked, domain.SessionStatusCancelled},
+	domain.SessionStatusLocked:    {domain.SessionStatusOpen, domain.SessionStatusOrdered, domain.SessionStatusCancelled},
+	domain.SessionStatusOrdered:   {domain.SessionStatusSettling},
+	domain.SessionStatusSettling:  {domain.SessionStatusCompleted},
+	domain.SessionStatusCompleted: {},
+	domain.SessionStatusCancelled: {},
+}
+
+func validateTransition(from, to string) error {
+	if from == to {
+		return nil
+	}
+	allowed := validTransitions[from]
+	for _, s := range allowed {
+		if s == to {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid transition from %s to %s", from, to)
+}
+
 const roomIDCharset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 func generateRoomID(length int) string {
@@ -107,58 +129,91 @@ func (s *sessionService) Update(ctx context.Context, session *domain.Session) er
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	// 1. Fetch existing session
-	existing, err := s.repo.GetByID(ctx, session.ID)
-	if err != nil {
+	return s.repo.WithTx(ctx, func(txRepo repository.SessionRepository) error {
+		// 1. Fetch existing session
+		// If transitioning to Settling, use FOR UPDATE for pessimistic locking
+		var existing *domain.Session
+		var err error
+		if session.Status == domain.SessionStatusSettling {
+			existing, err = txRepo.GetByIDForUpdate(ctx, session.ID)
+		} else {
+			existing, err = txRepo.GetByID(ctx, session.ID)
+		}
+
+		if err != nil {
+			return err
+		}
+		if existing == nil {
+			return fmt.Errorf("session not found")
+		}
+
+		// 2. Validate Status Transition
+		if session.Status != "" && session.Status != existing.Status {
+			if err := validateTransition(existing.Status, session.Status); err != nil {
+				return err
+			}
+		}
+
+		// 3. Merge values: Only update if the new value is NOT empty/zero
+		if session.Title == "" {
+			session.Title = existing.Title
+		}
+		if session.Slug == "" {
+			session.Slug = existing.Slug
+		}
+		if session.RoomID == "" {
+			session.RoomID = existing.RoomID
+		}
+		if session.Status == "" {
+			session.Status = existing.Status
+		}
+		if session.DiscountType == "" {
+			session.DiscountType = existing.DiscountType
+		}
+		if session.ShopLink == nil {
+			session.ShopLink = existing.ShopLink
+		}
+		if session.HostDefaultBankName == nil {
+			session.HostDefaultBankName = existing.HostDefaultBankName
+		}
+		if session.HostDefaultBankAccount == nil {
+			session.HostDefaultBankAccount = existing.HostDefaultBankAccount
+		}
+		if session.HostDefaultQrPayload == nil {
+			session.HostDefaultQrPayload = existing.HostDefaultQrPayload
+		}
+		if session.BatchConfigs == nil {
+			session.BatchConfigs = existing.BatchConfigs
+		}
+		if session.Password == nil {
+			session.Password = existing.Password
+		}
+
+		// Preserve critical fields
+		session.HostDeviceID = existing.HostDeviceID
+		session.CreatedAt = existing.CreatedAt
+
+		// Handle numeric/boolean fields (only update if not zero/default, OR if you explicitly want to allow it)
+		// For simplicity in this session update, we assume zero values mean "don't update" 
+		// unless it's a specific requirement to allow resetting to zero.
+		if session.DiscountValue == 0 {
+			session.DiscountValue = existing.DiscountValue
+		}
+		if session.ShippingFee == 0 {
+			session.ShippingFee = existing.ShippingFee
+		}
+
+		// Boolean fields are trickier as false is the zero value. 
+		// We can use the existing value if the request didn't intend to change it.
+		// For now, we'll keep them as they are in the request if provided.
+		// To be truly robust, we'd need a Patch-style request with nullable fields.
+
+		err = txRepo.Update(ctx, session)
+		if err == nil {
+			s.hub.Broadcast(session.ID.String(), "session_updated", session)
+		}
 		return err
-	}
-	if existing == nil {
-		return fmt.Errorf("session not found")
-	}
-
-	// 2. Merge values: Only update if the new value is NOT empty/zero
-	if session.Title == "" {
-		session.Title = existing.Title
-	}
-	if session.Slug == "" {
-		session.Slug = existing.Slug
-	}
-	if session.RoomID == "" {
-		session.RoomID = existing.RoomID
-	}
-	if session.Status == "" {
-		session.Status = existing.Status
-	}
-	if session.DiscountType == "" {
-		session.DiscountType = existing.DiscountType
-	}
-	if session.ShopLink == nil {
-		session.ShopLink = existing.ShopLink
-	}
-	if session.HostDefaultBankName == nil {
-		session.HostDefaultBankName = existing.HostDefaultBankName
-	}
-	if session.HostDefaultBankAccount == nil {
-		session.HostDefaultBankAccount = existing.HostDefaultBankAccount
-	}
-	if session.HostDefaultQrPayload == nil {
-		session.HostDefaultQrPayload = existing.HostDefaultQrPayload
-	}
-	if session.BatchConfigs == nil {
-		session.BatchConfigs = existing.BatchConfigs
-	}
-	if session.Password == nil {
-		session.Password = existing.Password
-	}
-
-	// For numeric fields, we might need a more complex check if 0 is a valid update, 
-	// but for now, this covers the critical string constraints.
-
-	err = s.repo.Update(ctx, session)
-	if err == nil {
-		s.hub.Broadcast(session.ID.String(), "session_updated", session)
-	}
-	return err
+	})
 }
 
 func (s *sessionService) Delete(ctx context.Context, id uuid.UUID) error {

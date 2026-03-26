@@ -6,6 +6,15 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	SessionStatusOpen      = "open"
+	SessionStatusLocked    = "locked"
+	SessionStatusOrdered   = "ordered"
+	SessionStatusSettling  = "settling"
+	SessionStatusCompleted = "completed"
+	SessionStatusCancelled = "cancelled"
+)
+
 type Session struct {
 	ID                     uuid.UUID `json:"id" db:"id"`
 	Slug                   string    `json:"slug" db:"slug"`

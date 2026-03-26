@@ -88,6 +88,10 @@ func (h *Hub) Run(ctx context.Context) {
 	}
 }
 
+func (h *Hub) BroadcastChan() <-chan Message {
+	return h.broadcast
+}
+
 func (h *Hub) Broadcast(sessionID string, msgType string, payload interface{}) {
 	data, _ := json.Marshal(payload)
 	h.broadcast <- Message{

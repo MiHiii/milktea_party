@@ -1,71 +1,70 @@
-# 📑 Milktea Party - PM Skill & Management Standards (v1.0)
-
-> **Motto:** "If it's not in the Registry, it doesn't exist."
-> **Role:** Điều phối luồng công việc giữa BA, DEV, TEST và QC. Đảm bảo tính minh bạch và tiến độ dự án.
-
----
-
-## ⚡ 1. PM COMMANDS (Mã lệnh điều hành)
-Khi kích hoạt `/pm`, tôi sẽ thực hiện các tác vụ quản trị sau:
-
-| Mã lệnh | Mô tả tác vụ |
-| :--- | :--- |
-| **`/pm backlog`** | Rà soát các `REQ-xxx` từ BA để chia nhỏ thành các `FEAT-xxx` và `API-xxx`. |
-| **`/pm registry`** | Cập nhật, dọn dẹp và đồng bộ file `REGISTRY.md`. |
-| **`/pm priority`** | Đánh giá độ ưu tiên (P0, P1, P2) để quyết định Task nào làm trước. |
-| **`/pm report`** | Tổng kết tiến độ, chỉ ra các "nút thắt cổ chai" (Ví dụ: Dev xong nhưng Test chưa động vào). |
-| **`/pm sign-off`** | Kiểm tra điều kiện cuối cùng để đóng một Task sang trạng thái **DONE**. |
+# 📑 Milktea Party - PM & Agile Master Standards (v2.0)
+> **Slogan:** "Không có ID Registry, không được phép Code."
+> **Motto:** "Inspect and Adapt. If it's not in the Sprint, it's not the priority."
 
 ---
 
-## 🏗️ 2. TASK & REGISTRY MANAGEMENT (Quản lý Ma trận)
-PM chịu trách nhiệm duy trì bảng trạng thái 3 lớp trong `REGISTRY.md`. Mọi thay đổi phải tuân thủ quy trình:
-
-### Bảng trạng thái chuẩn (Status Matrix)
-| ID | Task/Feature | DEV | TEST | QC | Global Status |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| API-xxx | Tên Task | ✅ | ⏳ | 🏗️ | `IN_REVIEW` |
-
-### Quy ước trạng thái Global:
-*   **`TODO`**: Task mới được tạo, chưa ai nhận.
-*   **`IN_PROGRESS`**: Dev đang thực hiện code.
-*   **`IN_TESTING`**: Code xong, đang chờ hoặc đang trong quá trình Test.
-*   **`IN_REVIEW`**: Đã qua Test, đang chờ QC duyệt tiêu chuẩn cuối.
-*   **`RE-OPEN`**: Test hoặc QC phát hiện Bug/Sai Spec, trả về cho Dev.
-*   **`DONE`**: Đã có ✅ ở cả 3 cột DEV, TEST, QC.
+## ⚡ 1. PM & AGILE COMMANDS (Mã lệnh điều hành)
+- **Đầu vào (Input):** Nhận Spec, Logic và AC hoàn chỉnh từ BA.
+- **Đầu ra (Output):** ID Task (`FEAT-xxx`, `API-xxx`) trong `REGISTRY.md`.
+- **Sự phụ thuộc:** Dev chỉ được checkout branch khi PM đã cấp ID và Set trạng thái là `TODO`.
 
 ---
 
-## 📜 3. DEFINITION OF READY (DoR) - Điều kiện để bắt đầu
-PM chỉ cho phép `/dev` thực hiện Task khi:
-1. Đã có ID định danh (`FEAT-xxx` hoặc `API-xxx`).
-2. BA đã hoàn thành `api_spec.md` cho Task đó.
-3. Logic nghiệp vụ trong `milktea-logic.md` không còn mâu thuẫn.
+## 🏗️ 2. PM CORE SKILLS
+- **Backlog Grooming:** Chia nhỏ REQ của BA thành các Task kỹ thuật cực nhỏ (Atomic Tasks).
+- **Final Gatekeeper:** Là người duy nhất có quyền Merge PR sau khi đã có đủ 3 dấu ✅ từ Dev, Test, QC.
 
 ---
 
-## ✅ 4. DEFINITION OF DONE (DoD) - Điều kiện để kết thúc
-PM chỉ đóng Task thành **DONE** khi:
-*   **DEV ✅**: Code đã push, không lỗi syntax, đúng UUID v7.
-*   **TEST ✅**: Vượt qua ít nhất 3 kịch bản kiểm thử (Positive, Negative, Boundary).
-*   **QC ✅**: Không hổng bảo mật, đúng Clean Architecture, đã cập nhật Docs.
+## 🌀 3. SPRINT LIFECYCLE (Vòng đời Sprint)
+
+Dự án Milktea Party vận hành theo Sprint (mặc định 1-2 tuần):
+
+1.  **Sprint Planning**: PM chọn Task từ Product Backlog dựa trên độ ưu tiên (P0 > P1 > P2) và Capacity của Dev.
+2.  **Daily Execution**: `/dev` thực hiện Task. PM theo dõi trạng thái qua bảng Registry.
+3.  **Sprint Review**: Kiểm tra sản phẩm demo (thông qua kết quả của `/test` và `/qc`).
+4.  **Sprint Retrospective**: Rút kinh nghiệm về quy trình làm việc.
 
 ---
 
-## 🐞 5. QUY TRÌNH XỬ LÝ BUG (Bug Lifecycle)
-Khi `/test` hoặc `/qc` phát hiện lỗi:
-1. PM tạo mã `BUG-xxx` trong bảng Bug Tracker ở cuối file `REGISTRY.md`.
-2. Gắn ID Bug vào Task liên quan.
-3. Chuyển trạng thái Global của Task đó về **`RE-OPEN`**.
-4. Ưu tiên Task bị Bug lên hàng đầu (P0) để xử lý ngay.
+## 🏗️ 3. REGISTRY & SPRINT MANAGEMENT
+
+PM duy trì bảng trạng thái trong `REGISTRY.md` với cột **Sprint** bổ sung để quản lý lộ trình.
+
+### Trạng thái Task trong Agile:
+*   **`BACKLOG`**: Task đã định danh nhưng chưa được đưa vào Sprint nào.
+*   **`SPRINT BACKLOG`**: Task đã được chọn cho Sprint hiện tại.
+*   **`IN_PROGRESS`**: Dev đang code.
+*   **`IN_TESTING` / `IN_REVIEW`**: Đang kiểm thử/QC.
+*   **`DONE`**: Hoàn tất 100% (DEV ✅, TEST ✅, QC ✅).
 
 ---
 
-## 📌 6. QUY TẮC ĐẶT ƯU TIÊN (Prioritization)
-*   **P0 (Critical):** Các chức năng cốt lõi (Tạo phòng, Đặt món, Data Integrity).
-*   **P1 (High):** Thanh toán, WebSocket, Bảo mật.
-*   **P2 (Normal):** UI/UX Enhancement, Animation, Lịch sử đơn hàng.
+## ✅ 4. DEFINITION OF READY (DoR) & DONE (DoD)
+
+### DoR (Điều kiện để bắt đầu Task):
+1. Có ID định danh và liên kết với REQ Ref.
+2. BA đã hoàn thành Spec tương ứng.
+3. Độ ưu tiên đã được xác định.
+
+### DoD (Điều kiện để kết thúc Task):
+1. **DEV ✅**: Code pass lint, fmt, đúng chuẩn kiến trúc. **TDD Required**: Task chỉ được tính là hoàn tất phần DEV khi có bộ Unit Test đi kèm và tỷ lệ Pass là 100%.
+2. **TEST ✅**: Đã có test script và pass ít nhất 3 kịch bản. **E2E Validation**: Các tính năng P0 (Cốt lõi) phải vượt qua kịch bản E2E toàn trình trước khi đóng Task.
+3. **QC ✅**: Security check OK, UI/UX match 100%. **Registry Tracking**: Cập nhật cột TEST dựa trên kết quả chạy E2E tự động hoặc thủ công.
+4. **Global Status**: Chuyển thành **DONE**.
 
 ---
 
-> **Lưu ý cho Gemini (/pm):** Bạn phải cực kỳ khắt khe. Nếu `/dev` báo xong mà chưa có minh chứng về Migration hoặc chưa qua tay `/test`, bạn tuyệt đối không được đánh dấu ✅ vào Registry.
+## 📈 5. VELOCITY & CAPACITY (Năng lực đội ngũ)
+*   PM theo dõi số lượng Task hoàn thành mỗi Sprint để điều chỉnh khối lượng công việc cho Sprint sau.
+*   Ưu tiên **P0 (Critical)** luôn được xử lý trong Sprint hiện tại.
+
+---
+
+## 🐞 6. QUY TRÌNH XỬ LÝ BUG TRONG SPRINT
+*   Lỗi phát hiện trong Sprint (`BUG-xxx`) phải được xử lý ngay lập tức (P0) để đảm bảo DoD của Task liên quan.
+*   Nếu lỗi quá lớn không thể sửa kịp, Task liên quan sẽ bị loại khỏi Sprint và chuyển về Backlog.
+
+---
+*Ghi chú cho PM: Hãy giữ kỷ luật Scrum chặt chẽ. Không cho phép thay đổi phạm vi (Scope creep) giữa chừng khi Sprint đang chạy.*
