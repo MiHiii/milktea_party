@@ -8,6 +8,7 @@ import (
 )
 
 type SessionRepository interface {
+	WithTx(ctx context.Context, fn func(SessionRepository) error) error
 	Create(ctx context.Context, session *domain.Session) error
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.Session, error)
 	GetByIDForUpdate(ctx context.Context, id uuid.UUID) (*domain.Session, error)

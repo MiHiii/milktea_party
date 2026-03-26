@@ -47,7 +47,7 @@
 | **API-003** | REQ-001 | S1 | `/api/sessions/:id` (Status) | PUT | ✅ | ⏳ | 🏗️ | `IN_TESTING` | Chờ test transition logic |
 | **API-004** | REQ-002 | S1 | `/api/participants` (Join) | POST | ✅ | ✅ | 🏗️ | `IN_REVIEW` | Chờ QC duyệt Security |
 | **API-005** | REQ-003 | S1 | `/api/order-items` (Add) | POST | ✅ | ❌ | ⏳ | `RE-OPEN` | **Fix BUG-001** |
-| **API-022** | REQ-001 | S1 | Session State (Validation) | PUT | ✅ | ⏳ | 🏗️ | `IN_TESTING` | Dev xong, chờ Unit/E2E Test |
+| **API-022** | REQ-001 | S1 | Session State (Validation) | ✅ | ✅ | ✅ | `DONE` | Added Transaction for FOR UPDATE - QC Passed |
 
 ---
 
