@@ -34,6 +34,26 @@ func (r *postgresOrderItemRepository) Create(ctx context.Context, i *domain.Orde
 	return nil
 }
 
+func (r *postgresOrderItemRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.OrderItem, error) {
+	query := `
+		SELECT id, participant_id, session_id, order_batch_id, item_name, price, quantity, note, ice, sugar, pay_separate, created_at
+		FROM order_items WHERE id = $1`
+
+	var i domain.OrderItem
+	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
+		&i.ID, &i.ParticipantID, &i.SessionID, &i.OrderBatchID, &i.ItemName, &i.Price, &i.Quantity, &i.Note, &i.Ice, &i.Sugar, &i.PaySeparate, &i.CreatedAt,
+	)
+
+	if err != nil {
+		if err.Error() == "no rows in result set" {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get order item by id: %w", err)
+	}
+
+	return &i, nil
+}
+
 func (r *postgresOrderItemRepository) GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]domain.OrderItem, error) {
 	query := `
 		SELECT id, participant_id, session_id, order_batch_id, item_name, price, quantity, note, ice, sugar, pay_separate, created_at
@@ -45,7 +65,7 @@ func (r *postgresOrderItemRepository) GetBySessionID(ctx context.Context, sessio
 	}
 	defer rows.Close()
 
-	var items []domain.OrderItem
+	items := []domain.OrderItem{}
 	for rows.Next() {
 		var i domain.OrderItem
 		err := rows.Scan(
@@ -71,7 +91,7 @@ func (r *postgresOrderItemRepository) GetByParticipantID(ctx context.Context, pa
 	}
 	defer rows.Close()
 
-	var items []domain.OrderItem
+	items := []domain.OrderItem{}
 	for rows.Next() {
 		var i domain.OrderItem
 		err := rows.Scan(

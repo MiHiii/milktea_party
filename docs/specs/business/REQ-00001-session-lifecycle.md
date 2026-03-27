@@ -256,7 +256,43 @@ And 3 session OPEN vẫn giữ nguyên
 
 ---
 
-## 7. Database Schema liên quan
+## 7. REQ-020: Host Recovery & Re-binding (Admin Secret)
+
+### 7.1 Mô tả
+Cho phép Host khôi phục quyền quản trị khi đổi trình duyệt hoặc mất `DeviceID` gốc mà không cần tài khoản.
+
+### 7.2 Cơ chế Admin Secret
+- Khi tạo Session, hệ thống sinh ngẫu nhiên một **Admin Secret** gồm 6 ký tự (Alphanumeric, viết hoa, loại bỏ ký tự dễ nhầm lẫn như O, 0, I, 1).
+- Admin Secret được lưu dưới dạng **bcrypt hash** trong DB (`admin_secret_hash`).
+- Admin Secret chỉ hiển thị 1 lần duy nhất cho Host lúc tạo phòng (hoặc ẩn sau icon "Con mắt" trong trang quản trị).
+
+### 7.3 Luồng khôi phục (Re-binding)
+1. User truy cập phòng với tư cách Guest.
+2. Chọn "Khôi phục quyền Host" -> Nhập Admin Secret.
+3. Backend kiểm tra các điều kiện:
+    - `admin_secret` khớp với hash.
+    - **Grace Period:** Host hiện tại phải offline (không có heartbeat) ít nhất **2 phút**.
+    - **Rate Limiting:** Sai quá 3 lần/tiếng sẽ bị khóa IP/DeviceID.
+4. Nếu hợp lệ:
+    - Cập nhật `sessions.host_device_id = X-Device-ID` mới.
+    - Broadcast WebSocket: `"host_changed"` kèm tên thiết bị/thời gian.
+
+### 7.4 Acceptance Criteria
+```gherkin
+Given Host tạo phòng và lưu mã "MT789X"
+When Host mở trình duyệt ẩn danh (DeviceID mới)
+And nhập mã "MT789X" trong khi Host cũ vẫn Online
+Then nhận thông báo "Host gốc vẫn đang hoạt động. Vui lòng thử lại sau 2 phút."
+
+Given Host cũ đã tắt trình duyệt > 2 phút
+When Host mới nhập đúng mã "MT789X"
+Then Host mới lấy được quyền quản trị (hiện nút Chốt đơn)
+And các Guest khác nhận được thông báo "Quyền Host đã được chuyển giao"
+```
+
+---
+
+## 8. Database Schema liên quan
 
 ```sql
 -- Bảng sessions (đã có)
@@ -268,13 +304,14 @@ CREATE TABLE sessions (
     host_device_id UUID NOT NULL,
     status      VARCHAR(20) NOT NULL DEFAULT 'open',
     password    VARCHAR(255),  -- Cần đổi sang bcrypt hash
+    admin_secret_hash VARCHAR(255) NOT NULL, -- Cần bổ sung cho REQ-020
     -- ... các cột khác
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Index cho cleanup
 CREATE INDEX idx_sessions_status_created ON sessions(status, created_at);
-```
+```,old_string:
 
 ---
 *Spec này là nguồn chân lý cho /dev. Mọi thắc mắc liên hệ /ba.*

@@ -137,9 +137,9 @@ export default function SessionClient({ initialSession, initialParticipants, ini
         api.orderBatches.getBySession(session.id)
       ])
       setSession(s)
-      setParticipants(p)
-      setOrderItems(i)
-      setOrderBatches(b)
+      setParticipants(p || [])
+      setOrderItems(i || [])
+      setOrderBatches(b || [])
     } catch (e) {
       console.error('Failed to re-sync data:', e)
     }
@@ -598,12 +598,12 @@ export default function SessionClient({ initialSession, initialParticipants, ini
         )}
 
         <Card className="rounded-[2.5rem] border-white/5 bg-white/[0.02]"> 
-          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4 text-sky-400" />Đơn hàng ({participants.length} người)</CardTitle></CardHeader> 
+          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4 text-sky-400" />Đơn hàng ({(participants || []).length} người)</CardTitle></CardHeader> 
           <CardContent className="p-0"> 
             <div className="divide-y divide-white/5"> 
-              {participants.map(p => (
+              {(participants || []).map(p => (
                 <ParticipantItem 
-                  key={p.id} participant={p} items={orderItems.filter(i => i.participantId === p.id)} session={session} orderBatches={orderBatches} 
+                  key={p.id} participant={p} items={(orderItems || []).filter(i => i.participantId === p.id)} session={session} orderBatches={orderBatches} 
                   myParticipantId={myParticipantId} iAmHost={iAmHost} isExpanded={expandedParticipant === p.id} onToggleExpand={() => setExpandedParticipant(expandedParticipant === p.id ? null : p.id)} 
                   editingItemId={editingItemId} editDraft={editDraft} setEditDraft={setEditDraft} onStartEdit={startEdit} onSaveEdit={saveEdit} onCancelEdit={() => setEditingItemId(null)} 
                   onDeleteItem={deleteItem} onCopyItem={(i) => { addItemForm.reset({ itemName: i.itemName, price: i.price, quantity: i.quantity, note: i.note || '', ice: i.ice || '50%', sugar: i.sugar || '50%', orderBatchId: i.orderBatchId, paySeparate: !!i.paySeparate }); window.scrollTo({ top: 0, behavior: 'smooth' }) }} 
@@ -614,7 +614,7 @@ export default function SessionClient({ initialSession, initialParticipants, ini
           </CardContent> 
         </Card>
 
-        {billEntries.length > 0 && orderItems.length > 0 && ( 
+        {billEntries.length > 0 && (orderItems || []).length > 0 && ( 
           <div className="flex flex-col gap-3"> 
             <button onClick={() => setShowBillSummary(!showBillSummary)} className="w-full h-14 rounded-[1.5rem] bg-sky-500/10 border border-sky-500/20 text-sky-400 font-black uppercase text-xs flex items-center justify-center gap-2 transition-all">
               <Receipt className="w-4 h-4" />{showBillSummary ? 'Ẩn bảng tạm tính' : 'Xem bảng tạm tính'}

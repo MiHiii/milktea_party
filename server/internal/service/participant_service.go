@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"milktea-server/internal/domain"
@@ -44,11 +45,23 @@ func (s *participantService) GetBySessionID(ctx context.Context, sessionID uuid.
 	return s.repo.GetBySessionID(ctx, sessionID)
 }
 
-func (s *participantService) UpdateLastActive(ctx context.Context, id uuid.UUID) error {
+func (s *participantService) UpdateLastActive(ctx context.Context, id uuid.UUID, deviceID uuid.UUID) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	p, err := s.repo.UpdateLastActive(ctx, id)
+	// Verify ownership before update
+	p, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if p == nil {
+		return fmt.Errorf("participant not found")
+	}
+	if p.DeviceID != deviceID {
+		return fmt.Errorf("unauthorized: you do not own this participant profile")
+	}
+
+	p, err = s.repo.UpdateLastActive(ctx, id)
 	if err == nil && p != nil {
 		s.hub.Broadcast(p.SessionID.String(), "participant_updated", p)
 	}

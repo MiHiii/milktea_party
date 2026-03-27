@@ -35,7 +35,7 @@
 | ID | REQ Ref | Sprint | Requirement / Logic | DEV | TEST | QC | Status | Ghi chú |
 | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
 | **REQ-00001** | REQ-00001 | S1 | State Machine (6 trạng thái Session) | ✅ | ✅ | ✅ | `DONE` | Đã vá IDOR & thêm FOR UPDATE |
-| **REQ-00002** | REQ-00002 | S1 | DeviceID Identity & Heartbeat | ✅ | ✅ | 🏗️ | `IN_REVIEW` | Đang chờ QC Audit |
+| **REQ-00002** | REQ-00002 | S1 | DeviceID Identity & Heartbeat | ✅ | ✅ | ✅ | `DONE` | FIXED: Heartbeat IDOR & naming |
 | **REQ-00003** | REQ-00003 | S1 | OrderBatch & Grouping Logic | ✅ | ⏳ | 🏗️ | `IN_TESTING` | Chờ Tester chạy E2E |
 | **REQ-00004** | REQ-00004 | S1 | Math: Rounding 1k & Residuals | ⏳ | ⏳ | 🏗️ | `IN_ANALYSIS` | **High Priority** - Cần BA spec |
 | **REQ-00005** | REQ-00005 | S1 | Real-time Sync (WebSocket) | ✅ | 🏗️ | 🏗️ | `IN_PROGRESS` | Cần cơ chế Re-sync khi mất WS |
@@ -62,8 +62,8 @@
 | **API-00001** | REQ-00001 | S0 | `/api/sessions` (Create) | POST | ✅ | ✅ | ✅ | `DONE` | |
 | **API-00002** | REQ-00001 | S0 | `/api/sessions/slug/:slug` | GET | ✅ | ✅ | ✅ | `DONE` | |
 | **API-00003** | REQ-00001 | S1 | `/api/sessions/:id` (Status) | ✅ | ✅ | ✅ | `DONE` | Bảo mật Host quyền Passed |
-| **API-00004** | REQ-00002 | S1 | `/api/participants` (Join) | POST | ✅ | ✅ | 🏗️ | `IN_REVIEW` | Chờ QC duyệt Security |
-| **API-00005** | REQ-00003 | S1 | `/api/order-items` (Add) | POST | ✅ | ❌ | ⏳ | `RE-OPEN` | **Fix BUG-00001** |
+| **API-00004** | REQ-00002 | S1 | `/api/participants` (Join) | POST | ✅ | ✅ | ✅ | `DONE` | FIXED: Response shape & naming |
+| **API-00005** | REQ-00003 | S1 | `/api/order-items` (Add) | POST | ✅ | ✅ | ✅ | `DONE` | FIXED: IDOR & convention |
 | **API-00022** | REQ-00001 | S1 | Session State (Validation) | — | ✅ | ✅ | ✅ | `DONE` | Added Transaction FOR UPDATE - QC Passed |
 
 ---
@@ -89,7 +89,7 @@
 
 | Bug ID | Task | Sprint | Mô tả lỗi | Mức độ | Trạng thái | Ghi chú |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **BUG-00001** | `API-00005` | S1 | Gửi số lượng âm (-) vẫn nhận món | **High** | Open | Dev đang fix theo logic mới |
+| **BUG-00001** | `API-00005` | S1 | Gửi số lượng âm (-) vẫn nhận món | **High** | Fixed | Đã thêm validation ở Service & Gin Binding |
 
 ---
 
@@ -99,10 +99,10 @@
 | Metric | Value |
 |--------|-------|
 | **Total Tasks** | 15 |
-| **Done** | 7 |
-| **In Progress** | 5 |
+| **Done** | 11 |
+| **In Progress** | 1 |
 | **Backlog** | 3 |
-| **Open Bugs** | 1 |
+| **Open Bugs** | 0 |
 | **Velocity** | — (first sprint) |
 
 ### Status Legend

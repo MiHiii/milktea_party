@@ -59,7 +59,7 @@ func (r *postgresParticipantRepository) GetBySessionID(ctx context.Context, sess
 	}
 	defer rows.Close()
 
-	var participants []domain.Participant
+	participants := []domain.Participant{}
 	for rows.Next() {
 		var p domain.Participant
 		if err := rows.Scan(&p.ID, &p.SessionID, &p.DeviceID, &p.Name, &p.IsHost, &p.IsPaid, &p.LastActive); err != nil {

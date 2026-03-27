@@ -38,6 +38,7 @@ type OrderBatchRepository interface {
 
 type OrderItemRepository interface {
 	Create(ctx context.Context, item *domain.OrderItem) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.OrderItem, error)
 	GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]domain.OrderItem, error)
 	GetByParticipantID(ctx context.Context, participantID uuid.UUID) ([]domain.OrderItem, error)
 	Update(ctx context.Context, item *domain.OrderItem) error

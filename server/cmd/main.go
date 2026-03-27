@@ -57,7 +57,7 @@ func main() {
 	// 6. Initialize Services
 	sessionSvc := service.NewSessionService(sessionRepo, participantRepo, wsHub)
 	participantSvc := service.NewParticipantService(participantRepo, wsHub)
-	orderItemSvc := service.NewOrderItemService(orderItemRepo, sessionRepo, wsHub)
+	orderItemSvc := service.NewOrderItemService(orderItemRepo, sessionRepo, participantRepo, wsHub)
 	orderBatchSvc := service.NewOrderBatchService(orderBatchRepo, wsHub)
 
 	// 7. Initialize Handlers

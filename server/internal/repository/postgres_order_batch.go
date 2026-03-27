@@ -45,7 +45,7 @@ func (r *postgresOrderBatchRepository) GetBySessionID(ctx context.Context, sessi
 	}
 	defer rows.Close()
 
-	var batches []domain.OrderBatch
+	batches := []domain.OrderBatch{}
 	for rows.Next() {
 		var b domain.OrderBatch
 		err := rows.Scan(

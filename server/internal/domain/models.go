@@ -62,12 +62,12 @@ type OrderBatch struct {
 
 type OrderItem struct {
 	ID            uuid.UUID  `json:"id" db:"id"`
-	ParticipantID uuid.UUID  `json:"participantId" db:"participant_id"`
-	SessionID     uuid.UUID  `json:"sessionId" db:"session_id"`
+	ParticipantID uuid.UUID  `json:"participantId" db:"participant_id" binding:"required"`
+	SessionID     uuid.UUID  `json:"sessionId" db:"session_id" binding:"required"`
 	OrderBatchID  *uuid.UUID `json:"orderBatchId" db:"order_batch_id"`
-	ItemName      string     `json:"itemName" db:"item_name"`
-	Price         int64      `json:"price" db:"price"`
-	Quantity      int        `json:"quantity" db:"quantity"`
+	ItemName      string     `json:"itemName" db:"item_name" binding:"required"`
+	Price         int64      `json:"price" db:"price" binding:"min=0"`
+	Quantity      int        `json:"quantity" db:"quantity" binding:"required,gt=0"`
 	Note          *string    `json:"note" db:"note"`
 	Ice           *string    `json:"ice" db:"ice"`
 	Sugar         *string    `json:"sugar" db:"sugar"`

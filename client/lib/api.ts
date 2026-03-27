@@ -37,7 +37,11 @@ export async function fetcher<T>(path: string, options?: RequestInit): Promise<T
   }
 
   if (res.status === 204) return {} as T;
-  return res.json();
+  const json = await res.json();
+  if (json && typeof json === 'object' && 'data' in json) {
+    return json.data as T;
+  }
+  return json;
 }
 
 export const api = {

@@ -208,7 +208,7 @@ func (r *postgresSessionRepository) ListByHost(ctx context.Context, hostDeviceID
 	}
 	defer rows.Close()
 
-	var sessions []domain.Session
+	sessions := []domain.Session{}
 	for rows.Next() {
 		var s domain.Session
 		err := rows.Scan(&s.ID, &s.Slug, &s.Title, &s.HostDeviceID, &s.Status, &s.CreatedAt)
@@ -234,7 +234,7 @@ func (r *postgresSessionRepository) ListByIDs(ctx context.Context, ids []uuid.UU
 	}
 	defer rows.Close()
 
-	var sessions []domain.Session
+	sessions := []domain.Session{}
 	for rows.Next() {
 		var s domain.Session
 		err := rows.Scan(&s.ID, &s.Slug, &s.Title, &s.HostDeviceID, &s.Status, &s.CreatedAt)

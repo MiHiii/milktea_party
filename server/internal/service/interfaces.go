@@ -23,7 +23,7 @@ type ParticipantService interface {
 	Create(ctx context.Context, participant *domain.Participant) error
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.Participant, error)
 	GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]domain.Participant, error)
-	UpdateLastActive(ctx context.Context, id uuid.UUID) error
+	UpdateLastActive(ctx context.Context, id uuid.UUID, deviceID uuid.UUID) error
 }
 
 type OrderBatchService interface {
@@ -36,6 +36,6 @@ type OrderBatchService interface {
 type OrderItemService interface {
 	Create(ctx context.Context, item *domain.OrderItem, idempotencyKey string) error
 	GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]domain.OrderItem, error)
-	Update(ctx context.Context, item *domain.OrderItem, idempotencyKey string) error
-	Delete(ctx context.Context, id uuid.UUID, idempotencyKey string) error
+	Update(ctx context.Context, item *domain.OrderItem, deviceID uuid.UUID, idempotencyKey string) error
+	Delete(ctx context.Context, id uuid.UUID, deviceID uuid.UUID, idempotencyKey string) error
 }
