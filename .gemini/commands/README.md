@@ -4,33 +4,38 @@ Quick reference for all available slash commands across 7 roles.
 
 ## Roles Overview
 
-| # | Command | Role | Agent File |
+| # | Command | Role | Skill File |
 |---|---------|------|-----------|
-| 1 | `/ba` | Business Analyst | `agents/AGENT_BA.md` |
-| 2 | `/pm` | Project Manager | `agents/AGENT_PM.md` |
-| 3 | `/dev` | Senior Developer | `agents/AGENT_DEV.md` |
-| 4 | `/test` | Tester | `agents/AGENT_TESTER.md` |
-| 5 | `/qc` | Quality Control | `agents/AGENT_QC.md` |
-| 6 | `/devops` | DevOps / SRE | `agents/AGENT_DEVOPS.md` |
-| 7 | `/architect` | Tech Lead / Architect | `agents/AGENT_ARCHITECT.md` |
+| 1 | `/ba` | Business Analyst | `skills/SKILL_BA.md` |
+| 2 | `/pm` | Project Manager | `skills/SKILL_PM.md` |
+| 3 | `/dev` | Senior Developer | `skills/SKILL_DEV.md` |
+| 4 | `/test` | Tester | `skills/SKILL_TESTER.md` |
+| 5 | `/qc` | Quality Control | `skills/SKILL_QC.md` |
+| 6 | `/devops` | DevOps / SRE | `skills/SKILL_DEVOPS.md` |
+| 7 | `/architect` | Tech Lead / Architect | `skills/SKILL_ARCHITECT.md` |
+
+---
 
 ## All Commands
 
 ### `/ba` — Business Analyst
 | Command | Purpose |
 |---------|---------|
-| `/ba spec` | Viết/cập nhật API specification |
-| `/ba logic` | Thiết kế business logic & formulas |
-| `/ba workflow` | Vẽ user flow diagram |
+| `/ba spec` | Tạo/cập nhật API specification |
+| `/ba logic` | Thiết kế business logic & formulas (INPUT/RULE/OUTPUT) |
+| `/ba ac {ID}` | Viết Acceptance Criteria (Gherkin format) |
+| `/ba workflow` | Vẽ user flow diagram (Mermaid) |
+| `/ba ticket` | Viết sprint ticket (Story/Task/Bug/Spike) |
+| `/ba cr` | Change Request + full impact analysis |
 | `/ba audit` | Gap analysis & edge case review |
-| `/ba market` | User persona & market insights |
 
 ### `/pm` — Project Manager
 | Command | Purpose |
 |---------|---------|
 | `/pm plan` | Sprint planning & task selection |
-| `/pm registry` | Quản lý Registry — tạo/cập nhật Task ID |
-| `/pm sprint` | Sprint lifecycle management |
+| `/pm registry` | Quản lý Registry — tạo/cập nhật Task ID (5-digit) |
+| `/pm dor {ID}` | Check Definition of Ready trước khi vào Sprint |
+| `/pm sprint` | Sprint lifecycle (start / close / retro) |
 | `/pm status` | Report sprint progress & velocity |
 | `/pm triage` | Bug triage & priority assignment |
 
@@ -38,48 +43,69 @@ Quick reference for all available slash commands across 7 roles.
 | Command | Purpose |
 |---------|---------|
 | `/dev code {ID}` | Implement a specific task |
-| `/dev test {ID}` | Write/run tests for a task |
+| `/dev test {ID}` | Write tests (TDD) for a task |
+| `/dev pr {ID}` | Prepare PR — self-review checklist + PR description |
 | `/dev refactor` | Refactor existing code |
-| `/dev migrate` | Create database migration |
-| `/dev review` | Self-review before PR |
+| `/dev migrate` | Create database migration (UP + DOWN) |
+| `/dev review` | Pre-PR self-review against DoD checklist |
 
 ### `/test` — Tester
 | Command | Purpose |
 |---------|---------|
-| `/test cases` | Viết test cases từ AC |
-| `/test api` | Test API endpoints |
-| `/test ui` | Test UI/UX responsiveness |
-| `/test e2e` | Run E2E automation |
-| `/test ws` | Test WebSocket realtime |
-| `/test bug` | Report bug to Registry |
+| `/test cases` | Viết test cases (TEST-xxxxx) từ AC |
+| `/test api` | Test API endpoints — status codes, response shape |
+| `/test ui` | Test UI/UX — responsive, mobile |
+| `/test e2e` | Run E2E automation (full user flow) |
+| `/test ws` | Test WebSocket realtime sync |
+| `/test bug` | Report bug → BUG-xxxxx in Registry |
 | `/test verify` | Retest fixed bugs |
 
 ### `/qc` — Quality Control
 | Command | Purpose |
 |---------|---------|
-| `/qc review` | Code review (logic, architecture) |
-| `/qc security` | Security audit |
-| `/qc audit` | Cross-reference: Code vs Spec vs Registry |
-| `/qc perf` | Performance review |
-| `/qc sign-off` | Final approval — mark QC ✅ |
+| `/qc review {ID}` | Code review — architecture, naming, clean code |
+| `/qc security` | Security audit (STRIDE — IDOR, injection, exposure) |
+| `/qc spec {ID}` | Spec & TDD compliance — Code ↔ BA spec ↔ Architect TDD |
+| `/qc audit {ID}` | Full cross-reference: Code = Spec = Test = Registry |
+| `/qc perf` | Performance review — N+1, SLO compliance |
+| `/qc sign-off {ID}` | Final approval → QC ✅ or REJECT |
 
 ### `/devops` — DevOps / SRE
 | Command | Purpose |
 |---------|---------|
-| `/devops deploy {env}` | Deploy to environment |
-| `/devops rollback` | Rollback to previous version |
+| `/devops deploy {env}` | Deploy to staging or production |
+| `/devops rollback` | Rollback (feature flag → container → migration → snapshot) |
 | `/devops pipeline` | Design/update CI/CD pipeline |
-| `/devops incident` | Incident response playbook |
-| `/devops monitor` | Setup monitoring & alerting |
-| `/devops env` | Environment configuration |
-| `/devops secrets` | Secret management |
+| `/devops infra` | Infrastructure as Code — provision/update resources |
+| `/devops incident {SEV}` | Activate incident response (SEV-1/2/3) |
+| `/devops postmortem {ID}` | Write post-mortem after incident |
+| `/devops monitor` | Setup/review monitoring & SLO-based alerting |
+| `/devops secrets` | Rotate, audit, or add secrets |
 
 ### `/architect` — Tech Lead
 | Command | Purpose |
 |---------|---------|
-| `/architect design {feature}` | Write Tech Design Document |
+| `/architect design {feature}` | Write Tech Design Document (TDD) |
 | `/architect adr` | Create Architecture Decision Record |
-| `/architect review` | Review system design |
-| `/architect debt` | Tech debt assessment |
+| `/architect review` | Review system design or breaking changes |
+| `/architect debt` | Tech debt assessment & planning |
 | `/architect capacity` | Capacity & scalability review |
-| `/architect diagram` | Generate diagrams |
+| `/architect diagram` | Generate system/sequence/ER diagrams (Mermaid) |
+
+---
+
+## Task ID Format Reference
+
+All IDs use **5-digit zero-padded** numbers, unique across the entire Registry.
+
+| Type | Format | Example |
+|------|--------|---------|
+| Feature | `FEAT-xxxxx` | `FEAT-00005` |
+| API spec | `API-xxxxx` | `API-00012` |
+| Bug fix | `BUG-xxxxx` | `BUG-00003` |
+| Refactor | `REFAC-xxxxx` | `REFAC-00001` |
+| DevOps | `OPS-xxxxx` | `OPS-00002` |
+| UI/UX | `UX-xxxxx` | `UX-00004` |
+| Documentation | `DOC-xxxxx` | `DOC-00001` |
+| Testing/QA | `QA-xxxxx` | `QA-00007` |
+| Test case | `TEST-xxxxx` | `TEST-00001` |

@@ -38,14 +38,16 @@ Reference: `skills/SKILL_DEV.md` for detailed methodology
 |---------|---------|
 | `/dev code {TASK-ID}` | Implement a specific task |
 | `/dev test {TASK-ID}` | Write/run tests for a task |
+| `/dev pr {TASK-ID}` | Prepare PR — self-review checklist + PR description |
 | `/dev refactor` | Refactor existing code |
 | `/dev migrate` | Create database migration |
 | `/dev review` | Self-review before PR |
 
 ## Activation
 Khi được gọi bằng `/dev`, agent phải:
-1. **Verify Task ID** — có trong Registry không? Status phải là `TODO` hoặc `IN_PROGRESS`
-2. Đọc spec/AC từ BA trước khi code
-3. Đọc `skills/SKILL_DEV.md` + relevant `rules/` files
-4. Announce branch name: `feature/{TASK-ID}-{description}`
-5. Follow TDD: Write test → Make it pass → Refactor
+1. **Verify Task ID** — có trong Registry không? Status phải là `SPRINT BACKLOG` hoặc `IN_PROGRESS`
+2. **Check DoR** — Task đã pass Definition of Ready (DoR ✅) chưa?
+3. Đọc spec/AC từ BA trước khi code
+4. Đọc `skills/SKILL_DEV.md` + relevant `rules/` files
+5. Announce branch name: `feature/{TASK-ID}-{description}`
+6. Follow TDD: Write test → Make it pass → Refactor

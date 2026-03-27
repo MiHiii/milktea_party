@@ -132,9 +132,9 @@ export default function SessionClient({ initialSession, initialParticipants, ini
     try {
       const [s, p, i, b] = await Promise.all([
         api.sessions.getBySlug(session.slug),
-        api.participants.listBySession(session.id),
-        api.orderItems.listBySession(session.id),
-        api.orderBatches.listBySession(session.id)
+        api.participants.getBySession(session.id),
+        api.orderItems.getBySession(session.id),
+        api.orderBatches.getBySession(session.id)
       ])
       setSession(s)
       setParticipants(p)
@@ -163,6 +163,12 @@ export default function SessionClient({ initialSession, initialParticipants, ini
         switch (msg.type) {
           case 'session_updated':
             setSession(prev => ({ ...prev, ...payload }))
+            break
+          case 'session_cancelled':
+            setSession(prev => ({ ...prev, status: 'cancelled' }))
+            break
+          case 'session_deleted':
+            window.location.href = '/'
             break
           case 'participant_created':
             setParticipants(prev => prev.some(p => p.id === payload.id) ? prev : [...prev, payload])
@@ -560,7 +566,22 @@ export default function SessionClient({ initialSession, initialParticipants, ini
       </header>
 
       <div className="max-w-2xl mx-auto px-4 pt-3 flex flex-col gap-3">
-        {session.status !== 'open' && myBill && !myBill.participant.isPaid && myBill.total > 0 && ( 
+        {session.status === 'cancelled' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+            <Card className="w-full max-w-sm rounded-[2.5rem] bg-slate-900 border-rose-500/20 p-8 text-center shadow-2xl">
+              <div className="mx-auto w-20 h-20 bg-rose-500/20 rounded-full flex items-center justify-center mb-6">
+                <XCircle className="w-10 h-10 text-rose-500" />
+              </div>
+              <h2 className="text-2xl font-black text-white mb-2">PHÒNG ĐÃ BỊ HỦY</h2>
+              <p className="text-white/60 mb-8">Rất tiếc, Host đã hủy phiên đặt trà sữa này.</p>
+              <Button asChild className="w-full h-12 rounded-2xl font-bold bg-white text-slate-950 hover:bg-white/90">
+                <a href="/">Về trang chủ</a>
+              </Button>
+            </Card>
+          </div>
+        )}
+
+        {session.status !== 'open' && session.status !== 'cancelled' && myBill && !myBill.participant.isPaid && myBill.total > 0 && ( 
           <div className="bg-gradient-to-r from-sky-600/30 to-indigo-600/30 border border-sky-500/30 rounded-[2.5rem] p-6 text-center shadow-2xl"> 
             <p className="text-sm text-white/70 mb-1">Bạn cần thanh toán</p> 
             <p className="text-4xl font-black text-white tabular-nums">{formatVND(myBill.total)}</p> 

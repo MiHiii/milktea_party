@@ -23,9 +23,9 @@ description: Branching strategy, commit conventions, PR process, and CI/CD rules
 ### Branch Naming Rules
 - Format: `{type}/{TICKET-ID}-{short-description}`
 - Examples:
-  - `feature/FEAT-005-calculate-shipping`
-  - `fix/BUG-012-null-participant-name`
-  - `hotfix/BUG-020-payment-crash`
+  - `feature/FEAT-00005-calculate-shipping`
+  - `fix/BUG-00012-null-participant-name`
+  - `hotfix/BUG-00020-payment-crash`
 - Use lowercase, hyphens only (no underscores, no spaces)
 - **No direct commits** to `main` or `develop` — blocked by branch protection
 
@@ -78,7 +78,7 @@ description: Branching strategy, commit conventions, PR process, and CI/CD rules
 Every PR must include:
 ```markdown
 ## 🎯 What & Why
-Link: [FEAT-005] / [BUG-012]
+Link: [FEAT-00005] / [BUG-00012]
 Brief description of what changed and why.
 
 ## 🔧 How to Test

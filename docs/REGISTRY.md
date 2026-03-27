@@ -12,13 +12,13 @@
 
 | Spec File | Covers | Mô tả |
 |:---|:---|:---|
-| [REQ-session-lifecycle](specs/REQ-session-lifecycle.md) | REQ-00001, 00009, 00010, 00014, 00019 | State machine, password, multi-join, cancel, expiry |
-| [REQ-identity-participant](specs/REQ-identity-participant.md) | REQ-00002, FEAT-00011 | DeviceID, heartbeat, online/offline status |
-| [REQ-order-management](specs/REQ-order-management.md) | REQ-00003, 00007, 00008, 00015 | Batch, pay separate, idempotency, host permissions |
-| [REQ-billing-settlement](specs/REQ-billing-settlement.md) | REQ-00004, 00006, 00011, 00013, 00016 | **CRITICAL:** Rounding, allocation, residual, VietQR, discount |
+| [REQ-session-lifecycle](specs/business/REQ-session-lifecycle.md) | REQ-00001, 00009, 00010, 00014, 00019 | State machine, password, multi-join, cancel, expiry |
+| [REQ-identity-participant](specs/business/REQ-identity-participant.md) | REQ-00002, FEAT-00011 | DeviceID, heartbeat, online/offline status |
+| [REQ-order-management](specs/business/REQ-order-management.md) | REQ-00003, 00007, 00008, 00015 | Batch, pay separate, idempotency, host permissions |
+| [REQ-billing-settlement](specs/business/REQ-billing-settlement.md) | REQ-00004, 00006, 00011, 00013, 00016 | **CRITICAL:** Rounding, allocation, residual, VietQR, discount |
 
 ### API Specification
-> Khi file `api_spec.md` quá dài, BA tách thành các module trong `docs/specs/api/`:
+> Khi file `api_overview.md` quá dài, BA tách thành các module trong `docs/specs/api/`:
 
 | Spec Module | Covers | File |
 |:---|:---|:---|
@@ -33,7 +33,7 @@
 
 | ID | REQ Ref | Sprint | Requirement / Logic | DEV | TEST | QC | Status | Ghi chú |
 | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
-| **REQ-00001** | REQ-00001 | S1 | State Machine (6 trạng thái Session) | 🏗️ | ⏳ | 🏗️ | `IN_PROGRESS` | Cần validation & Pessimistic Lock |
+| **REQ-00001** | REQ-00001 | S1 | State Machine (6 trạng thái Session) | ✅ | ✅ | ✅ | `DONE` | Đã vá IDOR & thêm FOR UPDATE |
 | **REQ-00002** | REQ-00002 | S1 | DeviceID Identity & Heartbeat | ✅ | ✅ | 🏗️ | `IN_REVIEW` | Đang chờ QC Audit |
 | **REQ-00003** | REQ-00003 | S1 | OrderBatch & Grouping Logic | ✅ | ⏳ | 🏗️ | `IN_TESTING` | Chờ Tester chạy E2E |
 | **REQ-00004** | REQ-00004 | S1 | Math: Rounding 1k & Residuals | ⏳ | ⏳ | 🏗️ | `IN_ANALYSIS` | **High Priority** - Cần BA spec |
@@ -60,7 +60,7 @@
 | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
 | **API-00001** | REQ-00001 | S0 | `/api/sessions` (Create) | POST | ✅ | ✅ | ✅ | `DONE` | |
 | **API-00002** | REQ-00001 | S0 | `/api/sessions/slug/:slug` | GET | ✅ | ✅ | ✅ | `DONE` | |
-| **API-00003** | REQ-00001 | S1 | `/api/sessions/:id` (Status) | PUT | ✅ | ⏳ | 🏗️ | `IN_TESTING` | Chờ test transition logic |
+| **API-00003** | REQ-00001 | S1 | `/api/sessions/:id` (Status) | ✅ | ✅ | ✅ | `DONE` | Bảo mật Host quyền Passed |
 | **API-00004** | REQ-00002 | S1 | `/api/participants` (Join) | POST | ✅ | ✅ | 🏗️ | `IN_REVIEW` | Chờ QC duyệt Security |
 | **API-00005** | REQ-00003 | S1 | `/api/order-items` (Add) | POST | ✅ | ❌ | ⏳ | `RE-OPEN` | **Fix BUG-00001** |
 | **API-00022** | REQ-00001 | S1 | Session State (Validation) | — | ✅ | ✅ | ✅ | `DONE` | Added Transaction FOR UPDATE - QC Passed |
@@ -116,3 +116,4 @@
 ---
 
 *Ghi chú quản lý: /pm đã khóa Sprint 1. Mọi thay đổi ngoài danh sách trên phải đưa vào Backlog.*
+

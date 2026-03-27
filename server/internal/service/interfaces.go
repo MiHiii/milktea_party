@@ -11,8 +11,8 @@ type SessionService interface {
 	Create(ctx context.Context, session *domain.Session, hostName string) (*domain.Participant, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.Session, error)
 	GetBySlug(ctx context.Context, slug string) (*domain.Session, error)
-	Update(ctx context.Context, session *domain.Session) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	Update(ctx context.Context, session *domain.Session, requesterDeviceID uuid.UUID) error
+	Delete(ctx context.Context, id uuid.UUID, requesterDeviceID uuid.UUID) error
 	ListByHost(ctx context.Context, hostDeviceID uuid.UUID) ([]domain.Session, error)
 	ListByIDs(ctx context.Context, ids []uuid.UUID) ([]domain.Session, error)
 	VerifyPassword(ctx context.Context, slug string, password string) (bool, error)
