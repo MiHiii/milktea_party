@@ -89,11 +89,23 @@ func (r *postgresParticipantRepository) Delete(ctx context.Context, id uuid.UUID
 	return nil
 }
 
-func (r *postgresParticipantRepository) UpdateLastActive(ctx context.Context, id uuid.UUID) error {
-	query := `UPDATE participants SET last_active = NOW() WHERE id = $1`
-	_, err := r.db.Pool.Exec(ctx, query, id)
+func (r *postgresParticipantRepository) UpdateLastActive(ctx context.Context, id uuid.UUID) (*domain.Participant, error) {
+	query := `
+		UPDATE participants 
+		SET last_active = NOW() 
+		WHERE id = $1 
+		RETURNING id, session_id, device_id, name, is_host, is_paid, last_active`
+
+	var p domain.Participant
+	err := r.db.Pool.QueryRow(ctx, query, id).
+		Scan(&p.ID, &p.SessionID, &p.DeviceID, &p.Name, &p.IsHost, &p.IsPaid, &p.LastActive)
+
 	if err != nil {
-		return fmt.Errorf("failed to update participant last active: %w", err)
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to update participant last active: %w", err)
 	}
-	return nil
+
+	return &p, nil
 }

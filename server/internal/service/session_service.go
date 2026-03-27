@@ -12,7 +12,9 @@ import (
 	"milktea-server/internal/domain"
 	"milktea-server/internal/repository"
 	"milktea-server/internal/websocket"
+
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type sessionService struct {
@@ -73,6 +75,16 @@ func (s *sessionService) Create(ctx context.Context, session *domain.Session, ho
 		session.DiscountType = "amount"
 	}
 
+	// Hash password if provided
+	if session.Password != nil && *session.Password != "" {
+		hashed, err := bcrypt.GenerateFromPassword([]byte(*session.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, fmt.Errorf("failed to hash password: %w", err)
+		}
+		strHashed := string(hashed)
+		session.Password = &strHashed
+	}
+
 	// Retry loop to handle RoomID collisions
 	maxRetries := 5
 	var err error
@@ -125,7 +137,7 @@ func (s *sessionService) GetBySlug(ctx context.Context, slug string) (*domain.Se
 	return s.repo.GetBySlug(ctx, slug)
 }
 
-func (s *sessionService) Update(ctx context.Context, session *domain.Session) error {
+func (s *sessionService) Update(ctx context.Context, session *domain.Session, requesterDeviceID uuid.UUID) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -145,6 +157,11 @@ func (s *sessionService) Update(ctx context.Context, session *domain.Session) er
 		}
 		if existing == nil {
 			return fmt.Errorf("session not found")
+		}
+
+		// 🛡️ Security Check: Only Host can update
+		if existing.HostDeviceID != requesterDeviceID {
+			return fmt.Errorf("unauthorized: only host can update session")
 		}
 
 		// 2. Validate Status Transition
@@ -185,7 +202,16 @@ func (s *sessionService) Update(ctx context.Context, session *domain.Session) er
 		if session.BatchConfigs == nil {
 			session.BatchConfigs = existing.BatchConfigs
 		}
-		if session.Password == nil {
+		
+		// Handle Password Hashing on Update
+		if session.Password != nil && *session.Password != "" && (existing.Password == nil || *session.Password != *existing.Password) {
+			hashed, err := bcrypt.GenerateFromPassword([]byte(*session.Password), bcrypt.DefaultCost)
+			if err != nil {
+				return fmt.Errorf("failed to hash password: %w", err)
+			}
+			strHashed := string(hashed)
+			session.Password = &strHashed
+		} else if session.Password == nil {
 			session.Password = existing.Password
 		}
 
@@ -193,20 +219,12 @@ func (s *sessionService) Update(ctx context.Context, session *domain.Session) er
 		session.HostDeviceID = existing.HostDeviceID
 		session.CreatedAt = existing.CreatedAt
 
-		// Handle numeric/boolean fields (only update if not zero/default, OR if you explicitly want to allow it)
-		// For simplicity in this session update, we assume zero values mean "don't update" 
-		// unless it's a specific requirement to allow resetting to zero.
 		if session.DiscountValue == 0 {
 			session.DiscountValue = existing.DiscountValue
 		}
 		if session.ShippingFee == 0 {
 			session.ShippingFee = existing.ShippingFee
 		}
-
-		// Boolean fields are trickier as false is the zero value. 
-		// We can use the existing value if the request didn't intend to change it.
-		// For now, we'll keep them as they are in the request if provided.
-		// To be truly robust, we'd need a Patch-style request with nullable fields.
 
 		err = txRepo.Update(ctx, session)
 		if err == nil {
@@ -216,11 +234,24 @@ func (s *sessionService) Update(ctx context.Context, session *domain.Session) er
 	})
 }
 
-func (s *sessionService) Delete(ctx context.Context, id uuid.UUID) error {
+func (s *sessionService) Delete(ctx context.Context, id uuid.UUID, requesterDeviceID uuid.UUID) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	err := s.repo.Delete(ctx, id)
+	existing, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if existing == nil {
+		return fmt.Errorf("session not found")
+	}
+
+	// 🛡️ Security Check: Only Host can delete
+	if existing.HostDeviceID != requesterDeviceID {
+		return fmt.Errorf("unauthorized: only host can delete session")
+	}
+
+	err = s.repo.Delete(ctx, id)
 	if err == nil {
 		s.hub.Broadcast(id.String(), "session_deleted", nil)
 	}
@@ -257,7 +288,9 @@ func (s *sessionService) VerifyPassword(ctx context.Context, slug string, passwo
 		return true, nil // No password set
 	}
 
-	return *session.Password == password, nil
+	// Compare Bcrypt Hash
+	err = bcrypt.CompareHashAndPassword([]byte(*session.Password), []byte(password))
+	return err == nil, nil
 }
 
 func (s *sessionService) CleanupOldSessions(ctx context.Context, days int) (int64, error) {

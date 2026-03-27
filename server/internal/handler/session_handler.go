@@ -99,7 +99,10 @@ func (h *SessionHandler) Update(c *gin.Context) {
 	}
 	session.ID = id
 
-	if err := h.svc.Update(c.Request.Context(), &session); err != nil {
+	// Get device ID from middleware to prevent IDOR
+	deviceID := middleware.GetDeviceID(c)
+
+	if err := h.svc.Update(c.Request.Context(), &session, deviceID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -115,7 +118,10 @@ func (h *SessionHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.svc.Delete(c.Request.Context(), id); err != nil {
+	// Get device ID from middleware to prevent IDOR
+	deviceID := middleware.GetDeviceID(c)
+
+	if err := h.svc.Delete(c.Request.Context(), id, deviceID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

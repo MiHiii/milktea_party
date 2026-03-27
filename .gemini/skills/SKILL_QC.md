@@ -1,87 +1,245 @@
-# 🛡️ Milktea Party - QC Skill & Quality Gate Standards (v1.1)
-> **Slogan:** "Code không sạch là code rác."
-> **Motto:** "Quality is not an act, it is a habit."
+---
+name: QC Skill
+description: >
+  Quality audit methodology, checklist, reject/approve workflow, and sign-off criteria.
+  Use this skill whenever QC audits a completed PR or task — including code review,
+  security audit, spec compliance check, test adequacy review, and final sign-off.
+  Trigger on phrases like "QC review", "audit this PR", "check compliance", "approve task",
+  "sign off", or when the DEV column is ✅ and TEST column is ✅ in the Registry.
+---
+
+# 🛡️ QC Skill — Quality Audit & Sign-off
 
 ---
 
-## ⚡ 1. QC WORKFLOW & DEPENDENCY
-- **Đầu vào (Input):** Nhận PR và mã nguồn từ Dev sau khi Dev đánh dấu ✅.
-- **Đầu ra (Output):** **QC ✅** (Audit Report) hoặc **REJECT**.
-- **Sự phụ thuộc:** Đây là bộ lọc cuối cùng. Nếu QC Reject, Task quay lại bước Dev bất kể Test có Pass hay không.
+## Quick Reference
+
+| Section | When to use |
+|---------|-------------|
+| [1. Audit Methodology](#1-audit-methodology) | Starting any QC audit |
+| [2. Quality Gate Checklist](#2-quality-gate-checklist) | Systematic audit execution |
+| [3. Security Audit](#3-security-audit) | Every PR with new endpoints or auth changes |
+| [4. Performance Review](#4-performance-review) | Pre-release or heavy DB/API changes |
+| [5. Spec & Architecture Compliance](#5-spec--architecture-compliance) | Cross-reference BA spec + Architect TDD |
+| [6. Reject Workflow](#6-reject-workflow) | When violations found |
+| [7. Approve & Sign-off](#7-approve--sign-off) | When all gates pass |
 
 ---
 
-## 🏗️ 2. QC CORE SKILLS
-- **Code Audit:** Soi từng dòng code so với `SKILL_DEV.md` (UUID v7, Clean Architecture, Security).
-- **Coverage Audit:** Kiểm tra xem Dev có "gian lận" bằng cách viết test hời hợt không (Yêu cầu Coverage > 80%).
+## 1. Audit Methodology
+
+### Audit Layers (in order)
+```
+1. Spec Compliance   → Code matches BA spec + Architect TDD exactly
+2. Code Quality      → Clean code, architecture layer compliance
+3. Testing Audit     → TDD compliance, coverage adequacy, test quality
+4. Security Audit    → IDOR, injection, data exposure, STRIDE threats
+5. Performance       → DB queries, N+1, bundle size, SLO targets
+6. Cross-Reference   → Code = Spec = Test = Registry consistent
+```
+
+### Audit Against Rules
+Mỗi audit phải đối chiếu với:
+- `rules/code-style.md` → Code quality & naming
+- `rules/testing.md` → Test quality & TDD compliance
+- `rules/security.md` → Security compliance
+- `rules/error-handling.md` → Error handling patterns
+- `rules/database.md` → DB schema & queries
+- `rules/api-convention.md` → API design & response shape
+- `rules/git-workflow.md` → PR & commit standards
+- `docs/tdd/` → Architect TDD (if exists for this feature)
+- `docs/adr/` → Relevant ADRs
+
+### Audit Triggers
+- DEV column in Registry → ✅
+- TEST column in Registry → ✅
+- All `[MUST]` items from Dev's self-review checklist → resolved
 
 ---
 
-## ⚡ 3. QC COMMANDS (Mã lệnh giám sát)
-Khi kích hoạt `/qc`, tôi sẽ thực hiện các tác vụ "soi" lỗi hệ thống:
+## 2. Quality Gate Checklist
 
-| Mã lệnh | Mô tả tác vụ |
-| :--- | :--- |
-| **`/qc review`** | Thực hiện Code Review (Logic, Naming, Clean Architecture, UUID v7 check). |
-| **`/qc security`** | Quét lỗ hổng bảo mật (SQLi, XSS, CSRF, IDOR, thiếu `X-Device-ID`). |
-| **`/qc audit`** | Đối soát chéo: Code vs API Spec vs Registry. Đảm bảo đồng bộ 100%. |
-| **`/qc perf`** | Kiểm tra hiệu năng (DB Index, N+1 Query, Next.js Image/LCP optimization). |
-| **`/qc sign-off`** | Kiểm tra điều kiện cuối cùng để đánh dấu ✅ vào cột **QC** trong `REGISTRY.md`. |
+### A. Code Quality
+- [ ] Clean Architecture layers respected — no cross-layer imports
+- [ ] Functions ≤ 50 lines, files ≤ 300 lines
+- [ ] No magic numbers or hardcoded values — all constants extracted
+- [ ] Meaningful variable/function names per naming conventions (SKILL_DEV §3, §4)
+- [ ] No `fmt.Println` / `console.log` / dead code in production
+- [ ] Guard clauses used (no deep nesting > 3 levels)
+- [ ] Error wrapping with context at every layer (Go: `fmt.Errorf("context: %w", err)`)
+- [ ] TypeScript: no `any` type unless justified with comment
+- [ ] TypeScript: all async functions have explicit return type annotation
+- [ ] `go fmt` / `npm run lint` / `tsc --noEmit` all clean
 
----
+### B. Testing Compliance
+- [ ] Test files exist for all business logic (`*_test.go` / `*.test.ts`)
+- [ ] Coverage ≥ 80% for service/business logic layer
+- [ ] Coverage ≥ 90% for money/calculation/formula functions
+- [ ] Coverage ≥ 60% for HTTP handlers (integration tests count)
+- [ ] Tests cover positive, negative, and boundary cases (≥ 3 per function)
+- [ ] No trivial/fake tests that always pass regardless of implementation
+- [ ] TDD unit tests: describe → arrange → act → assert pattern followed
+- [ ] New API routes have ≥1 integration test
 
-## 📏 2. QUALITY GATE CHECKLIST (Bộ tiêu chí lọc)
-QC sẽ từ chối (**Reject**) bất kỳ Task nào vi phạm các điều sau:
+### C. Database
+- [ ] Primary keys are UUID v7
+- [ ] Migrations have both UP and DOWN scripts
+- [ ] No `SELECT *` in queries — explicit column lists
+- [ ] Foreign keys have indexes
+- [ ] Parameterized queries only — no string concatenation (SQL injection risk)
+- [ ] Complex queries have EXPLAIN plan reviewed
+- [ ] Migrations idempotent or safe to re-run
 
-### A. Testing & Compliance (Kiểm soát chất lượng)
-- [ ] **Audit TDD:** Kiểm tra file code của `/dev` xem có file test (`*_test.go`) đi kèm không. Nếu code logic mà không có test -> **REJECT**.
-- [ ] **Coverage Audit:** Kiểm tra báo cáo Coverage. Nếu các hàm quan trọng về tiền tệ có Coverage < **90%** -> **REJECT**.
-- [ ] **E2E Sign-off:** Xác nhận kịch bản E2E đã chạy thành công trên môi trường Staging/Preview trước khi bấm nút Duyệt cuối cùng.
+### D. API & Error Handling
+- [ ] Response envelope follows standard `{ data, error }` shape
+- [ ] Error responses include `error_code` and `message` (and `trace_id` if applicable)
+- [ ] Correct HTTP status codes used (ref: SKILL_ARCHITECT §4)
+- [ ] Validation errors return field-level details
+- [ ] All list endpoints are paginated `{ data: [...], meta: { total, page, per_page } }`
+- [ ] API versioned (`/v1/` prefix) for public-facing endpoints
 
-### B. Kỹ thuật & Hạ tầng (Technical Debt)
-- [ ] **UUID v7:** Mọi Primary Key trong Database bắt buộc là UUID v7.
-- [ ] **Error Handling:** Phải có `error_code` và `trace_id` trong mọi response lỗi.
-- [ ] **Clean Code:** Không còn `fmt.Println`, `console.log`, code thừa hoặc biến không sử dụng.
-- [ ] **Context:** (Backend) Sử dụng `context.Context` đúng cách trong các tác vụ DB/Network.
-
-### C. Nghiệp vụ & UI/UX
-- [ ] **Math Precision:** Logic tính toán phải khớp 100% với `milktea-logic.md`.
-- [ ] **Responsive:** Không bị vỡ Layout trên các thiết bị Mobile phổ biến.
-- [ ] **Zod/Validator:** Phải có Validation ở cả hai đầu (Frontend & Backend).
-
----
-
-## 🔐 3. SECURITY AUDIT (Kiểm soát bảo mật)
-Đây là "lớp giáp" cuối cùng của dự án:
-*   **IDOR Check:** Đảm bảo người dùng không thể sửa đơn hàng của người khác qua API.
-*   **Rate Limiting:** Kiểm tra các API tạo phòng/đặt món có bị spam hay không.
-*   **Sensitive Data:** Tuyệt đối không trả về Password, Secret Keys hoặc thông tin thiết bị nhạy cảm trong JSON.
-*   **CORS:** Cấu hình CORS chặt chẽ, chỉ cho phép các Domain hợp lệ.
-
----
-
-## 🚀 4. PERFORMANCE & STANDARDS
-*   **Database:** Kiểm tra các câu lệnh `SELECT` phức tạp có được tối ưu bằng Index không. Tránh `SELECT *`.
-*   **Frontend:** Kiểm tra việc sử dụng Client/Server Component có hợp lý để giảm Bundle Size.
-*   **Sync Logic:** Đảm bảo WebSocket Hub không bị rò rỉ bộ nhớ (Memory Leak) khi có hàng ngàn Client kết nối.
-
----
-
-## ✅ 5. QC'S DEFINITION OF DONE (Quyền năng quyết định)
-QC chỉ ký ✅ vào cột **QC** trong `REGISTRY.md` khi:
-1.  **DEV ✅**: Code sạch, đúng chuẩn Clean Architecture.
-2.  **TEST ✅**: Đã pass mọi kịch bản và không còn Bug `Open`.
-3.  **Audit Pass**: Spec (BA) = Code (Dev) = Test Results (Tester).
-4.  **Global Status**: Trạng thái Task chuyển thành **DONE**.
+### E. Registry & PR Standards
+- [ ] Registry DEV column → ✅ with PR link
+- [ ] Registry TEST column → ✅ with test evidence link
+- [ ] Branch named correctly: `feature/{ID}-{kebab-desc}` / `fix/...` / `chore/...`
+- [ ] PR description includes: **What**, **Why**, **How to test**
+- [ ] No unrelated changes bundled into this PR
 
 ---
 
-## 🛑 6. QUY TRÌNH REJECT (Khi phát hiện lỗi)
-Khi QC phát hiện sai phạm hoặc không đạt chất lượng:
-1.  Ghi rõ lý do Reject (Ví dụ: *"Vi phạm REQ-002: Tiền làm tròn sai 1.000đ"*).
-2.  Chuyển trạng thái **DEV** về 🏗️ (In Progress) hoặc **TEST** về ❌ nếu lỗi do bỏ sót kịch bản.
-3.  Yêu cầu PM cập nhật trạng thái Task thành **RE-OPEN**.
+## 3. Security Audit
+
+Audit mỗi PR có endpoint mới, auth thay đổi, hoặc xử lý dữ liệu nhạy cảm.
+
+### STRIDE Security Checklist (per feature)
+- [ ] **Spoofing** — Identity header validated on every mutating endpoint
+- [ ] **Tampering** — IDOR prevention: ownership verified before mutation (not just route-level auth)
+- [ ] **Repudiation** — Sensitive operations logged in audit trail (payment, permission changes)
+- [ ] **Info Disclosure** — No secrets/passwords/PII in API responses or logs
+- [ ] **DoS** — Rate limiting configured for public & auth endpoints
+- [ ] **Elevation** — Authorization checked at resource level (RBAC enforced)
+
+### Additional Security Checks
+- [ ] Input validated and sanitized (SQL injection, XSS, path traversal)
+- [ ] CORS whitelist configured — no wildcard `*` in production
+- [ ] HTTPS enforced; no mixed content
+- [ ] Secrets in environment variables, not source code
+- [ ] Dependencies checked for known CVEs (`npm audit` / `go mod verify`)
 
 ---
 
-> **Lưu ý cho Gemini (/qc):** Bạn là người giữ chìa khóa cuối cùng. Đừng để sự nhiệt huyết của Dev hay sự vội vàng của PM làm lu mờ sự tỉnh táo của bạn. Một lỗi nhỏ lọt qua tay QC là một vết sẹo lớn của dự án. Hãy "soi" thật kỹ!
+## 4. Performance Review
+
+### Backend Performance
+- [ ] No N+1 query patterns — use JOINs or batch loads
+- [ ] Complex queries have proper indexes (check with EXPLAIN ANALYZE)
+- [ ] `context.Context` passed to all DB/network calls
+- [ ] Connection pooling configured
+- [ ] No goroutine leaks in WebSocket/long-polling handlers
+- [ ] p50 API response < 100ms, p99 < 500ms (ref: SKILL_ARCHITECT §8 SLOs)
+
+### Frontend Performance
+- [ ] Server Components used where possible (reduce bundle size)
+- [ ] Images optimized via Next.js `<Image>` component
+- [ ] No unnecessary re-renders (useEffect/useMemo dependency arrays correct)
+- [ ] Lazy loading for heavy components (`dynamic(() => import(...))`)
+- [ ] LCP < 2.5s on mobile (ref: SKILL_ARCHITECT §8 SLOs)
+- [ ] Bundle size not increased beyond 10% without justification
+
+---
+
+## 5. Spec & Architecture Compliance
+
+### BA Spec Compliance
+- [ ] Implementation matches `api_spec.md` contract exactly (request/response shape, field names)
+- [ ] Business logic matches documented formulas (billing, calculation, state machine)
+- [ ] UI flow matches design specifications and AC (Acceptance Criteria)
+- [ ] All edge cases from spec are handled in code
+
+### Architect TDD Compliance
+- [ ] If TDD exists in `docs/tdd/`: implementation follows approved design
+- [ ] Layer separation matches TDD system architecture diagram
+- [ ] API contracts match TDD §2.2
+- [ ] DB schema changes match TDD §2.3
+- [ ] Any deviation from TDD requires new ADR or TDD revision — not silent override
+
+### Cross-Reference Final Check
+```
+Code logic  ↔  BA Spec AC       (100% match)
+API shape   ↔  api_spec.md      (100% match)
+Test cases  ↔  Spec scenarios   (all AC covered)
+Registry    ↔  Actual PR/branch (IDs consistent)
+```
+
+---
+
+## 6. Reject Workflow
+
+When QC finds violations:
+
+```
+1. Document: Which rule is violated + exact file:line + evidence
+2. Classify: [MUST] blocking vs [SUGGEST] improvement vs [QUESTION] clarification needed
+3. Action:
+   - [MUST] → Set DEV column back to 🏗️, QC column → ❌
+   - [MUST] → Notify PM to re-open task
+   - [SUGGEST] → Comment on PR, non-blocking for merge
+   - [QUESTION] → Tag Dev or BA for clarification before proceeding
+4. Report using Reject Message Format below
+```
+
+### Reject Message Format
+```markdown
+## ❌ QC REJECT — {TASK-ID}
+
+### Violations
+1. **[MUST] rules/security.md §2.1**: IDOR — `DeleteOrder` doesn't verify device ownership
+   - File: `internal/handler/order_handler.go:45`
+   - Fix required: Add `deviceID` ownership check before delete
+
+2. **[MUST] rules/testing.md §3**: Coverage 62% on `SessionService` (required: ≥80%)
+   - Missing: negative cases for `LockSession` and boundary test for empty participant list
+
+3. **[SUGGEST] rules/code-style.md §5**: Function `ProcessOrder` is 67 lines (limit: 50)
+   - File: `internal/service/order_service.go:120`
+   - Suggestion: Extract validation block into `validateOrderItems()`
+
+### Status Update
+- DEV: 🏗️ (was ✅) — re-open for fixes
+- TEST: ⬜ (pending DEV fix)
+- QC: ❌
+- Registry: Updated
+```
+
+---
+
+## 7. Approve & Sign-off
+
+### Prerequisites
+```
+DEV ✅  +  TEST ✅  +  All [MUST] violations resolved  =  QC ✅
+```
+
+No exceptions. QC ✅ is the final gate before Registry status → `DONE`.
+
+### Sign-off Message Format
+```markdown
+## ✅ QC APPROVED — {TASK-ID}
+
+### Audit Summary
+- Spec Match:    ✅ 100% aligned with BA spec + TDD
+- Code Quality:  ✅ Clean, follows architecture layers, meets style rules
+- Testing:       ✅ Coverage 87% (service), 94% (billing logic), all scenarios adequate
+- Security:      ✅ STRIDE checked, no IDOR or injection risks found
+- Performance:   ✅ No N+1, indexes verified, p99 estimated < 300ms
+- Cross-Ref:     ✅ Code = Spec = Test = Registry consistent
+
+### Registry Update
+- QC: ✅
+- Status: → DONE
+```
+
+### When to Escalate (не approve, не reject)
+- Spec is ambiguous → escalate to BA before auditing
+- TDD has conflicting design from implementation → escalate to Architect
+- Security risk unclear → raise with Architect for threat assessment

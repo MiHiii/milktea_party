@@ -31,10 +31,11 @@ export function OrderForm({
   PERCENT_OPTIONS
 }: OrderFormProps) {
   const { register, watch, setValue, getValues, formState: { errors } } = form
+  const isReadOnly = session.status !== 'open'
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-4 bg-black/20 rounded-2xl p-4 border border-white/5">
+      <div className={`flex flex-col gap-4 bg-black/20 rounded-2xl p-4 border border-white/5 ${isReadOnly ? 'opacity-50 pointer-events-none' : ''}`}>
         {/* Nhóm thông tin chính: Tên món */}
         <div className="flex flex-col gap-1.5">
           <label className="text-[10px] font-black uppercase tracking-[0.15em] text-white/30 ml-1">Tên món</label>
@@ -44,6 +45,7 @@ export function OrderForm({
             className="h-11 bg-black/20 border-white/10 text-base rounded-xl" 
             error={errors.itemName?.message as string} 
             {...register('itemName')} 
+            disabled={isReadOnly}
           />
         </div>
 
@@ -58,6 +60,7 @@ export function OrderForm({
               className="h-11 bg-black/20 border-white/10 text-base rounded-xl [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
               error={errors.price?.message as string} 
               {...register('price')} 
+              disabled={isReadOnly}
             />
           </div>
           <div className="flex-1 flex flex-col gap-1.5">
@@ -67,6 +70,7 @@ export function OrderForm({
                 type="button" 
                 onClick={() => { const v = getValues('quantity'); if (v > 1) setValue('quantity', v - 1) }} 
                 className="flex-1 h-full flex items-center justify-center text-white/40 hover:bg-white/10 transition-colors"
+                disabled={isReadOnly}
               >
                 <Minus className="w-3.5 h-3.5" />
               </button>
@@ -75,6 +79,7 @@ export function OrderForm({
                 type="button" 
                 onClick={() => { const v = getValues('quantity'); if (v < 99) setValue('quantity', v + 1) }} 
                 className="flex-1 h-full flex items-center justify-center text-white/40 hover:bg-white/10 transition-colors"
+                disabled={isReadOnly}
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>
@@ -90,6 +95,7 @@ export function OrderForm({
             placeholder="Trân châu, thạch, ít ngọt..." 
             className="h-11 bg-black/20 border-white/10 italic text-base rounded-xl" 
             {...register('note')} 
+            disabled={isReadOnly}
           />
         </div>
 
@@ -103,6 +109,7 @@ export function OrderForm({
                   key={opt} 
                   type="button" 
                   onClick={() => setValue('sugar', opt)} 
+                  disabled={isReadOnly}
                   className={`flex-1 py-1.5 text-[10px] font-black rounded-full transition-all ${watch('sugar') === opt ? 'bg-sky-500 text-white shadow-lg' : 'text-white/30 hover:text-white/50'}`}
                 >
                   {opt}
@@ -118,6 +125,7 @@ export function OrderForm({
                   key={opt} 
                   type="button" 
                   onClick={() => setValue('ice', opt)} 
+                  disabled={isReadOnly}
                   className={`flex-1 py-1.5 text-[10px] font-black rounded-full transition-all ${watch('ice') === opt ? 'bg-sky-500 text-white shadow-lg' : 'text-white/30 hover:text-white/50'}`}
                 >
                   {opt}
@@ -136,6 +144,7 @@ export function OrderForm({
               <select 
                 className="w-full bg-emerald-500/5 border border-emerald-500/20 rounded-xl pl-10 pr-10 h-11 text-base text-emerald-400 font-bold appearance-none focus:outline-none focus:border-emerald-500/40 transition-all" 
                 {...register('orderBatchId')}
+                disabled={isReadOnly}
               >
                 {orderBatches.map(b => (
                   <option key={b.id} value={b.id} className="bg-slate-900 text-white">{b.name}</option>
@@ -150,13 +159,13 @@ export function OrderForm({
         <div className="flex items-center justify-between px-1 mt-1">
           <div className="flex items-center gap-3">
             <label className="relative flex items-center justify-center cursor-pointer group">
-              <input type="checkbox" {...register('paySeparate')} className="peer sr-only" />
+              <input type="checkbox" {...register('paySeparate')} className="peer sr-only" disabled={isReadOnly} />
               <div className="w-6 h-6 rounded-full border-2 border-white/10 flex items-center justify-center transition-all peer-checked:bg-sky-500 peer-checked:border-sky-500 peer-checked:scale-110 active:scale-90">
                 <Check className="w-4 h-4 text-white scale-0 transition-transform peer-checked:scale-100" />
               </div>
             </label>
             <span 
-              onClick={() => setValue('paySeparate', !watch('paySeparate'))} 
+              onClick={() => !isReadOnly && setValue('paySeparate', !watch('paySeparate'))} 
               className="text-xs text-white/50 cursor-pointer select-none font-medium hover:text-white/70 transition-colors"
             >
               Tạo mã QR thanh toán riêng cho món này
@@ -165,6 +174,7 @@ export function OrderForm({
           <button 
             type="button" 
             onClick={onClear} 
+            disabled={isReadOnly}
             className="text-[10px] font-black uppercase text-white/20 hover:text-rose-400 flex items-center gap-1.5 transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Xoá hết</span>
@@ -172,7 +182,7 @@ export function OrderForm({
         </div>
       </div>
 
-      <Button type="submit" disabled={isLoading} className="w-full h-12 rounded-2xl relative overflow-hidden transition-all active:scale-[0.97] active:brightness-90 shadow-xl shadow-sky-500/10 hover:shadow-sky-500/20">
+      <Button type="submit" disabled={isLoading || isReadOnly} className="w-full h-12 rounded-2xl relative overflow-hidden transition-all active:scale-[0.97] active:brightness-90 shadow-xl shadow-sky-500/10 hover:shadow-sky-500/20">
         {justAdded && (
           <div className="absolute inset-0 bg-emerald-500 text-white flex items-center justify-center gap-2 z-10 animate-in fade-in zoom-in duration-300">
             <CheckCircle className="w-5 h-5" /> Đã thêm món!

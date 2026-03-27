@@ -247,7 +247,7 @@ func (r *postgresSessionRepository) ListByIDs(ctx context.Context, ids []uuid.UU
 }
 
 func (r *postgresSessionRepository) CleanupOldSessions(ctx context.Context, days int) (int64, error) {
-	query := `DELETE FROM sessions WHERE created_at < NOW() - $1 * INTERVAL '1 day'`
+	query := `DELETE FROM sessions WHERE created_at < NOW() - $1 * INTERVAL '1 day' AND status IN ('completed', 'cancelled')`
 	result, err := r.db.Exec(ctx, query, days)
 	if err != nil {
 		return 0, fmt.Errorf("failed to cleanup old sessions: %w", err)

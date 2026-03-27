@@ -1,7 +1,7 @@
 # 📋 SPEC: Identity & Participant Management
 > **Registry IDs:** REQ-002, FEAT-011
 > **Owner:** /ba | **Version:** 1.0 | **Date:** 2026-03-25
-> **Depends on:** `api_spec.md` §C (Participant Logic)
+> **Depends on:** `api_overview.md` §C (Participant Logic)
 
 ---
 

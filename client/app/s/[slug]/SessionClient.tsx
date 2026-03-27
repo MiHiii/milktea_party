@@ -6,7 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
   CheckCircle, Share2, ExternalLink, Loader2, ShoppingBag, Users, QrCode, Receipt,
-  Lock, Crown, ChevronDown, ArrowLeft, Settings, Eye, EyeOff, Check, Copy, Camera, Image as ImageIcon, ShoppingCart
+  Lock, Crown, ChevronDown, ArrowLeft, Settings, Eye, EyeOff, Check, Copy, Camera, Image as ImageIcon, ShoppingCart,
+  Trash2, Play, CheckCircle2, XCircle, Banknote, Unlock
 } from 'lucide-react'
 import { getOrCreateDeviceId, getParticipantId, setParticipantId, isHost } from '@/lib/identity'
 import { calculateBill, formatVND } from '@/lib/calc'
@@ -127,11 +128,33 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   }, [initialSession, initialParticipants])
 
   // 2. WebSocket & Realtime Sync
+  const fetchLatestData = useCallback(async () => {
+    try {
+      const [s, p, i, b] = await Promise.all([
+        api.sessions.getBySlug(session.slug),
+        api.participants.getBySession(session.id),
+        api.orderItems.getBySession(session.id),
+        api.orderBatches.getBySession(session.id)
+      ])
+      setSession(s)
+      setParticipants(p)
+      setOrderItems(i)
+      setOrderBatches(b)
+    } catch (e) {
+      console.error('Failed to re-sync data:', e)
+    }
+  }, [session.id, session.slug])
+
   useEffect(() => {
     if (!mounted) return
 
     const ws = createWS(session.id)
     
+    ws.onopen = () => {
+      // Re-sync data when connection is established/re-established
+      fetchLatestData()
+    }
+
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data)
@@ -141,8 +164,17 @@ export default function SessionClient({ initialSession, initialParticipants, ini
           case 'session_updated':
             setSession(prev => ({ ...prev, ...payload }))
             break
+          case 'session_cancelled':
+            setSession(prev => ({ ...prev, status: 'cancelled' }))
+            break
+          case 'session_deleted':
+            window.location.href = '/'
+            break
           case 'participant_created':
             setParticipants(prev => prev.some(p => p.id === payload.id) ? prev : [...prev, payload])
+            break
+          case 'participant_updated':
+            setParticipants(prev => prev.map(p => p.id === payload.id ? { ...p, ...payload } : p))
             break
           case 'order_item_created':
             setOrderItems(prev => prev.some(i => i.id === payload.id) ? prev : [...prev, payload])
@@ -277,53 +309,33 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   }, [session.slug, copyToClipboard])
 
   // 4. Host Logic
-  const lockOrder = useCallback(async () => { 
+  const updateSessionStatus = useCallback(async (status: Session['status'], title: string, description: ReactNode, variant: 'primary' | 'destructive' = 'primary') => {
+    setConfirmConfig({ 
+      isOpen: true, title, description, variant, 
+      onConfirm: async () => { 
+        setIsLoading(true)
+        try { 
+          await api.sessions.update(session.id, { status })
+          setConfirmConfig(prev => ({ ...prev, isOpen: false })) 
+        } finally { setIsLoading(false) } 
+      } 
+    })
+  }, [session.id])
+
+  const lockOrder = useCallback(() => {
     if (!session.hostDefaultBankAccount || !session.hostDefaultBankName) {
       showWarning('Thiếu thông tin Bank', 'Vui lòng bổ sung STK và Ngân hàng của Host.')
       setHostControlsOpen(true)
       return
     }
+    updateSessionStatus('locked', 'Chốt đơn?', 'Guest sẽ không thể thêm/sửa món.')
+  }, [session, updateSessionStatus])
 
-    setConfirmConfig({ 
-      isOpen: true, 
-      title: 'Chốt đơn?', 
-      description: 'Mọi người sẽ không thể sửa món nữa.',
-      variant: 'primary', 
-      onConfirm: async () => { 
-        setIsLoading(true)
-        try { 
-          await api.sessions.update(session.id, { status: 'locked' })
-          setConfirmConfig(prev => ({ ...prev, isOpen: false })) 
-        } finally { setIsLoading(false) } 
-      } 
-    })
-  }, [session])
-
-  const markSessionPaid = useCallback(async () => { 
-    setConfirmConfig({ 
-      isOpen: true, title: 'Hoàn thành đơn?', description: 'Đánh dấu tất cả là đã thanh toán.', variant: 'primary', 
-      onConfirm: async () => { 
-        setIsLoading(true)
-        try { 
-          await api.sessions.update(session.id, { status: 'paid' })
-          setConfirmConfig(prev => ({ ...prev, isOpen: false })) 
-        } finally { setIsLoading(false) } 
-      } 
-    }) 
-  }, [session])
-
-  const reopenOrder = useCallback(async () => { 
-    setConfirmConfig({ 
-      isOpen: true, title: 'Mở lại đơn?', description: 'Cho phép mọi người sửa món.', variant: 'primary', 
-      onConfirm: async () => { 
-        setIsLoading(true)
-        try { 
-          await api.sessions.update(session.id, { status: 'open' })
-          setConfirmConfig(prev => ({ ...prev, isOpen: false })) 
-        } finally { setIsLoading(false) } 
-      } 
-    }) 
-  }, [session])
+  const unlockOrder = useCallback(() => updateSessionStatus('open', 'Mở lại đơn?', 'Guest có thể tiếp tục đặt món.'), [updateSessionStatus])
+  const placeOrder = useCallback(() => updateSessionStatus('ordered', 'Đã đặt hàng?', 'Xác nhận bạn đã đặt món với quán.'), [updateSessionStatus])
+  const startSettle = useCallback(() => updateSessionStatus('settling', 'Thu tiền?', 'Bắt đầu tính toán bill và hiển thị QR thanh toán.'), [updateSessionStatus])
+  const completeSession = useCallback(() => updateSessionStatus('completed', 'Hoàn thành?', 'Đánh dấu session đã kết thúc.', 'primary'), [updateSessionStatus])
+  const cancelSession = useCallback(() => updateSessionStatus('cancelled', 'Hủy phòng?', 'Tất cả dữ liệu sẽ bị khóa và không thể khôi phục.', 'destructive'), [updateSessionStatus])
 
   const claimName = useCallback(async (name: string) => { 
     if (!name.trim()) return
@@ -535,7 +547,13 @@ export default function SessionClient({ initialSession, initialParticipants, ini
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <button onClick={copySessionId} className="group flex items-center gap-1.5 text-white/60 font-mono text-xs bg-white/5 px-2 py-0.5 rounded-md"># {session.slug} {copiedId ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100" />}</button>
               <h1 className="font-bold text-white truncate text-sm sm:text-base">{session.title}</h1>
-              <Badge variant={session.status === 'open' ? 'open' : (session.status === 'locked' ? 'locked' : 'paid')}>{session.status === 'open' ? '🟢 Mở đơn' : (session.status === 'locked' ? '🔒 Đã chốt' : '✅ Đã thanh toán')}</Badge>
+              <Badge variant={session.status as any}>
+                {session.status === 'open' ? '🟢 Mở đơn' : 
+                 session.status === 'locked' ? '🔒 Đã chốt' : 
+                 session.status === 'ordered' ? '📦 Đã đặt' :
+                 session.status === 'settling' ? '💸 Thu tiền' :
+                 session.status === 'completed' ? '✅ Hoàn tất' : '❌ Đã hủy'}
+              </Badge>
               {iAmHost && <Badge variant="host" className="bg-amber-500/20 text-amber-400 border-amber-500/20"><Crown className="w-3 h-3" />Host</Badge>}
             </div>
           </div>
@@ -548,7 +566,22 @@ export default function SessionClient({ initialSession, initialParticipants, ini
       </header>
 
       <div className="max-w-2xl mx-auto px-4 pt-3 flex flex-col gap-3">
-        {session.status !== 'open' && myBill && !myBill.participant.isPaid && myBill.total > 0 && ( 
+        {session.status === 'cancelled' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+            <Card className="w-full max-w-sm rounded-[2.5rem] bg-slate-900 border-rose-500/20 p-8 text-center shadow-2xl">
+              <div className="mx-auto w-20 h-20 bg-rose-500/20 rounded-full flex items-center justify-center mb-6">
+                <XCircle className="w-10 h-10 text-rose-500" />
+              </div>
+              <h2 className="text-2xl font-black text-white mb-2">PHÒNG ĐÃ BỊ HỦY</h2>
+              <p className="text-white/60 mb-8">Rất tiếc, Host đã hủy phiên đặt trà sữa này.</p>
+              <Button asChild className="w-full h-12 rounded-2xl font-bold bg-white text-slate-950 hover:bg-white/90">
+                <a href="/">Về trang chủ</a>
+              </Button>
+            </Card>
+          </div>
+        )}
+
+        {session.status !== 'open' && session.status !== 'cancelled' && myBill && !myBill.participant.isPaid && myBill.total > 0 && ( 
           <div className="bg-gradient-to-r from-sky-600/30 to-indigo-600/30 border border-sky-500/30 rounded-[2.5rem] p-6 text-center shadow-2xl"> 
             <p className="text-sm text-white/70 mb-1">Bạn cần thanh toán</p> 
             <p className="text-4xl font-black text-white tabular-nums">{formatVND(myBill.total)}</p> 
@@ -595,19 +628,36 @@ export default function SessionClient({ initialSession, initialParticipants, ini
         
         {iAmHost && ( 
           <div className="flex flex-col gap-3 mt-4"> 
-            {session.status === 'open' ? (
-              <Button variant="warning" size="lg" onClick={lockOrder} disabled={isLoading} className="w-full text-lg font-bold py-7 rounded-[2rem] uppercase tracking-widest"><Lock className="w-5 h-5 mr-2" /> Chốt đơn</Button>
-            ) : session.status === 'locked' ? (
-              <div className="flex gap-3">
-                <Button variant="outline" size="lg" onClick={() => setShowQrs(!showQrs)} className="flex-1 py-7 rounded-[2rem] font-bold uppercase">QR</Button>
-                <Button variant="success" size="lg" onClick={markSessionPaid} disabled={isLoading} className="flex-1 py-7 rounded-[2rem] font-bold uppercase">Hoàn thành</Button>
+            {session.status === 'open' && (
+              <div className="flex flex-col gap-3">
+                <Button variant="warning" size="lg" onClick={lockOrder} disabled={isLoading} className="w-full text-lg font-bold py-7 rounded-[2rem] uppercase tracking-widest"><Lock className="w-5 h-5 mr-2" /> Chốt đơn</Button>
+                <button onClick={cancelSession} className="text-[10px] text-white/20 hover:text-rose-400 uppercase font-black text-center w-full">Hủy phòng?</button>
               </div>
-            ) : (
-              <div className="text-center py-6 bg-emerald-500/10 rounded-[2rem] font-black text-emerald-400 uppercase">✅ Hoàn thành!</div>
-            )} 
-            {session.status !== 'open' && (
-              <button onClick={reopenOrder} className="mt-2 text-[10px] text-white/20 hover:text-sky-400 uppercase font-black text-center w-full">Mở lại đơn?</button>
-            )} 
+            )}
+            {session.status === 'locked' && (
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <Button variant="outline" size="lg" onClick={unlockOrder} disabled={isLoading} className="flex-1 py-7 rounded-[2rem] font-bold uppercase"><Unlock className="w-5 h-5 mr-2" /> Mở lại</Button>
+                  <Button variant="success" size="lg" onClick={placeOrder} disabled={isLoading} className="flex-1 py-7 rounded-[2rem] font-bold uppercase text-white"><Play className="w-5 h-5 mr-2" /> Đặt hàng</Button>
+                </div>
+                <button onClick={cancelSession} className="text-[10px] text-white/20 hover:text-rose-400 uppercase font-black text-center w-full">Hủy phòng?</button>
+              </div>
+            )}
+            {session.status === 'ordered' && (
+              <Button size="lg" onClick={startSettle} disabled={isLoading} className="w-full text-lg font-bold py-7 rounded-[2rem] uppercase tracking-widest"><Banknote className="w-5 h-5 mr-2" /> Thu tiền</Button>
+            )}
+            {session.status === 'settling' && (
+              <div className="flex gap-3">
+                <Button variant="outline" size="lg" onClick={() => setShowQrs(!showQrs)} className="flex-1 py-7 rounded-[2rem] font-bold uppercase"><QrCode className="w-5 h-5 mr-2" /> QR</Button>
+                <Button variant="success" size="lg" onClick={completeSession} disabled={isLoading} className="flex-1 py-7 rounded-[2rem] font-bold uppercase text-white"><CheckCircle2 className="w-5 h-5 mr-2" /> Hoàn thành</Button>
+              </div>
+            )}
+            {session.status === 'completed' && (
+              <div className="text-center py-6 bg-indigo-500/10 border border-indigo-500/20 rounded-[2rem] font-black text-indigo-400 uppercase">✨ Session đã hoàn tất</div>
+            )}
+            {session.status === 'cancelled' && (
+              <div className="text-center py-6 bg-rose-500/10 border border-rose-500/20 rounded-[2rem] font-black text-rose-400 uppercase">🚫 Session đã bị hủy</div>
+            )}
           </div> 
         )}
       </div>

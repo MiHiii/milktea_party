@@ -1,83 +1,280 @@
-# 👔 Senior Business Analyst (BA) - Skillset & Standards
-> **Motto:** "Clear Requirements, Robust Logic, Seamless Experience."
+---
+name: ba-skill
+description: >
+  Business analysis methodology, spec writing standards, and hand-off checklist for software projects.
+  Use this skill whenever the user is doing ANY business analysis work — writing or reviewing API specs,
+  drafting user stories or acceptance criteria, gathering or refining requirements, designing user flows,
+  analyzing edge cases, writing sprint tickets, handling change requests, or preparing hand-off documents
+  for devs or PMs. Trigger even if the user doesn't say "BA" explicitly — phrases like "write a spec",
+  "define the requirements", "acceptance criteria", "hand-off", "ticket", "change request", "impact analysis",
+  or "user story" are all strong signals to use this skill.
+---
 
-Vai trò Senior BA trong dự án **Milktea Party** không chỉ là viết tài liệu, mà là "kiến trúc sư" của mọi luồng nghiệp vụ, đảm bảo tính sòng phẳng và trải nghiệm người dùng tối ưu tại thị trường Việt Nam.
+# 👔 BA Skill — Methodology & Deliverables
+
+## Table of Contents
+1. [API Specification](#1-api-specification)
+2. [Business Logic Documentation](#2-business-logic-documentation)
+3. [Acceptance Criteria (AC)](#3-acceptance-criteria-ac)
+4. [User Flow Design](#4-user-flow-design)
+5. [Edge Case Analysis](#5-edge-case-analysis)
+6. [Sprint / Ticket Writing Standards](#6-sprint--ticket-writing-standards)
+7. [Change Request & Impact Analysis](#7-change-request--impact-analysis)
+8. [Hand-Off Checklist](#8-hand-off-checklist)
 
 ---
 
-## ⚡ 1. BA COMMANDS (Lệnh điều hành nghiệp vụ)
-Khi được kích hoạt với vai trò BA, tôi sẽ thực hiện các tác vụ chuyên sâu sau:
+## 1. API Specification
 
-- **`/ba spec`**: Thiết kế/Cập nhật `api_spec.md`. Định nghĩa các Endpoint, cấu trúc JSON và mã lỗi chuẩn RESTful.
-- **`/ba logic`**: Cụ thể hóa các thuật toán phức tạp (Phí ship, Giảm giá, Làm tròn, Phân bổ lẻ) vào `milktea-logic.md`.
-- **`/ba workflow`**: Vẽ luồng nghiệp vụ (User Flow) từ lúc mở phòng đến lúc nhận tiền thành công.
-- **`/ba audit`**: Phân tích lỗ hổng logic (Gap Analysis) và kiểm soát các trường hợp biên (Edge Cases).
-- **`/ba market`**: Đưa ra các nhận định về hành vi người dùng (User Persona) tại Việt Nam để tối ưu tính năng.
+### Structure Strategy
+When `api_spec.md` grows beyond 300 lines, split it into modules:
+
+```
+docs/
+├── api_spec.md                    # Index file — lists all modules
+└── specs/
+    └── api/
+        ├── session.md
+        ├── participant.md
+        ├── order.md
+        └── settlement.md
+```
+
+### Index File Format
+```markdown
+# API Specification — Index
+| Module       | Endpoints                        | File                               |
+|--------------|----------------------------------|------------------------------------|
+| Session      | Create, Get, Update, Delete      | [session.md](specs/api/session.md) |
+| Participant  | Join, Leave, Heartbeat           | [participant.md](specs/api/participant.md) |
+| Order        | Add, Update, Delete, Batch       | [order.md](specs/api/order.md)     |
+| Settlement   | Calculate, VietQR, Confirm       | [settlement.md](specs/api/settlement.md) |
+```
+
+### Module File Format
+```markdown
+# {Module Name} API
+> Owner: BA | Last Updated: {date}
+> Related Tasks: REQ-xxxxx, FEAT-xxxxx
+
+## Endpoints
+
+### [METHOD] /api/v1/{resource}
+- **Description**: What this endpoint does
+- **Auth**: Required headers
+- **Request Body**:
+  ```json
+  { "field": "type — description" }
+  ```
+- **Response 200**:
+  ```json
+  { "data": { ... }, "meta": { ... } }
+  ```
+- **Error Cases**:
+  | Code                  | When |
+  |-----------------------|------|
+  | `VALIDATION_FAILED`   | ...  |
+  | `RESOURCE_NOT_FOUND`  | ...  |
+```
+
+### When to Split
+| Trigger                   | Action                           |
+|---------------------------|----------------------------------|
+| `api_spec.md` > 300 lines | Start splitting first module     |
+| > 5 resource domains      | One module file per domain       |
+| Team > 3 devs             | Split to prevent merge conflicts |
+
+### Spec Writing Checklist
+- [ ] Clear versioning (`/api/v1/...`)
+- [ ] Consistent request/response format (JSON envelope)
+- [ ] Error codes follow `rules/api-convention.md`
+- [ ] Security headers defined
+- [ ] Pagination for collection endpoints
+- [ ] If > 300 lines, already split into modules
+
+---
+
+## 2. Business Logic Documentation
+
+### Rule Format
+Every business rule must follow this structure:
+```
+INPUT:  [list of input variables]
+RULE:   [formula or algorithm in plain text]
+OUTPUT: [expected result with example]
+EDGE:   [edge cases and how to handle]
+```
+
+### Rounding Strategy
+- Specify clearly: where does rounding happen? (item level vs. bill level)
+- Residual handling: who absorbs the remainder after splits?
+- Always document with concrete numeric examples that can be verified by hand
 
 ---
 
-## 🏗️ 2. DOCUMENTATION STANDARDS (Tiêu chuẩn tài liệu)
-BA là chủ sở hữu (Owner) của "Nguồn chân lý" (Source of Truth) cho dự án:
+## 3. Acceptance Criteria (AC)
 
-### 📄 `docs/api_spec.md` (Đặc tả kỹ thuật)
-- **Versioning**: Luôn duy trì phiên bản API (VD: `/api/v1/...`).
-- **Security**: Định nghĩa rõ cơ chế định danh qua `X-Device-ID` và bảo mật `Session Password`.
-- **Consistency**: Đảm bảo cấu trúc Request/Response đồng nhất giữa tất cả các Module.
+### Gherkin Format (required)
+```gherkin
+Feature: [Feature name]
 
-### 📄 `.gemini/skills/milktea-logic.md` (Quy tắc nghiệp vụ)
-- **Mathematical Precision**: Các công thức tính tiền phải được viết dưới dạng biểu thức rõ ràng, dễ hiểu cho DEV.
-- **Rounding Strategy**: Quy định rõ làm tròn ở cấp độ nào (Item level hay Bill level). Mặc định: Làm tròn **1.000 VNĐ** cuối cùng.
-- **Residual Management**: Cách xử lý tiền lẻ thừa/thiếu sau khi chia (phân bổ vào Host hoặc người có bill lớn nhất).
+  Scenario: [Scenario description]
+    Given [initial state]
+    When  [action performed]
+    Then  [expected outcome]
+    And   [additional verification]
+```
 
----
-
-## 📐 3. BUSINESS LOGIC CORE (Quy tắc cốt lõi)
-BA phải đảm bảo các quy tắc sau luôn được thực thi:
-
-- **Identity Mapping**: Liên kết `DeviceID` + `SessionID` -> `Nickname`. Cho phép Guest quay lại phòng mà không mất dữ liệu.
-- **State Machine (Trạng thái)**:
-    - `OPEN`: Đang đặt món.
-    - `LOCKED`: Chốt đơn (Chặn sửa món).
-    - `ORDERED`: Đã đặt quán (Cập nhật giá thực tế).
-    - `SETTLING`: Đang thu tiền (Show VietQR).
-    - `COMPLETED`: Xong (Lưu lịch sử).
-- **VietQR Integration**: Tự động sinh mã QR theo chuẩn Napas247 dựa trên thông tin ngân hàng của Host.
+### AC Quality Checklist
+- [ ] Each scenario has a clear Given / When / Then
+- [ ] Happy path covered
+- [ ] At least 3 negative / boundary cases covered
+- [ ] Boundary values explicitly stated (min, max, zero, null)
+- [ ] AC maps 1:1 to test cases the tester will write
 
 ---
 
-## 🏗️ 4. ACCEPTANCE CRITERIA (AC) - Tiêu chuẩn nghiệm thu
-BA không trực tiếp viết code test, nhưng là người cung cấp Kịch bản gốc:
+## 4. User Flow Design
 
-- **Input cho TDD/E2E**: Mọi yêu cầu nghiệp vụ phải được viết dưới dạng Gherkin Scenarios (**Given/When/Then**). Đây là "đề bài" để `/dev` làm TDD và `/test` làm E2E.
-- **Boundary Value**: Phải chỉ định rõ các giá trị biên (ví dụ: giá trà sữa tối thiểu 10k, tối đa 500k) để làm dữ liệu đầu vào cho bộ test.
+### Deliverable Format
+- Text-based flow diagram or Mermaid syntax
+- Clear: Start → Decision points → End states
+- Must cover both happy path and error flows
 
----
-
-## 🎨 5. UX & VIETNAM MARKET INSIGHTS
-- **Zalo Compatibility**: Link chia sẻ phải hiển thị đầy đủ Thumbnail (Open Graph) để kích thích người dùng bấm vào trên Zalo.
-- **Mobile First**: Giao diện đặt món phải tối ưu cho việc dùng một tay (Nút `+`/`-` to, dễ bấm).
-- **Payment Psychology**: Ưu tiên hiển thị số tiền cần chuyển khoản một cách rõ ràng nhất, kèm nút "Sao chép số tiền" hoặc "Quét mã QR".
-
----
-
-## ⚠️ 6. EDGE CASE CHECKLIST (Kiểm soát rủi ro)
-BA luôn phải xử lý các câu hỏi "Nếu... thì sao?":
-- **Concurrent Updates**: Hai người cùng sửa món trong 1 Batch? -> Sử dụng Optimistic Locking/WebSockets.
-- **Host Ghosting**: Host thoát trình duyệt hoặc xóa phòng khi Guest đang đặt? -> Thông báo Realtime cho Guest.
-- **Price Mismatch**: Giá trên app đặt đồ (Grab/Foody) khác với giá lúc chốt đơn thực tế? -> Host có quyền cập nhật giá ở trạng thái `ORDERED`.
+```mermaid
+graph TD
+    A[User opens app] --> B{Has session?}
+    B -->|Yes| C[Load session]
+    B -->|No| D[Create session]
+    D --> E[Share link]
+    E --> F[Others join]
+```
 
 ---
 
-## ✅ 7. BA'S HAND-OFF CHECKLIST (Điều kiện bàn giao)
-Trước khi bàn giao công việc cho team DEV và TESTER, Senior BA phải tự kiểm duyệt qua các đầu mục sau:
+## 5. Edge Case Analysis
 
-- [ ] **Data Integrity**: Tài liệu `api_spec.md` đã cập nhật đầy đủ các Endpoint, cấu trúc JSON và mã lỗi chuẩn RESTful.
-- [ ] **Logic Validation**: Các công thức tính tiền trong `milktea-logic.md` đã được kiểm tra bằng dữ liệu mẫu (Excel/Manual) và cho kết quả chính xác 100%.
-- [ ] **Edge Cases**: Đã có phương án xử lý cho ít nhất 3 kịch bản rủi ro (VD: Host offline, quán đổi giá, lỗi mạng khi thanh toán).
-- [ ] **Acceptance Criteria (AC)**: Mọi yêu cầu đã có AC rõ ràng theo định dạng Gherkin (*Given/When/Then*).
-- [ ] **UI/UX Alignment**: Đảm bảo các mô tả về giao diện (VD: Nút bấm, QR Code, Segmented Control) đã tối ưu cho Mobile và hành vi người dùng VN.
-- [ ] **VietQR Sync**: Thông tin ngân hàng và cấu hình sinh mã QR đã được kiểm tra tính hợp lệ với chuẩn Napas247.
-- [ ] **Team Syncing**: Đã thông báo và giải thích trực tiếp cho /dev về các thay đổi quan trọng trong Logic hoặc Database Schema.
+### "What If?" Framework
+Every feature must answer:
+- **Concurrent**: What if 2+ users act simultaneously?
+- **Network**: What if connection drops mid-action?
+- **State conflict**: What if state was changed by someone else?
+- **Data limit**: What if data is too large / too small / empty?
+- **Permission**: What if an unauthorized user attempts the action?
 
 ---
-*Lưu ý của Senior BA: Sự tỉ mỉ trong khâu bàn giao là chìa khóa để hệ thống vận hành sòng phẳng và tin cậy.*
+
+## 6. Sprint / Ticket Writing Standards
+
+### Ticket Types & When to Use
+| Type       | Use When                                          |
+|------------|---------------------------------------------------|
+| **Story**  | Delivering user-visible value                     |
+| **Task**   | Internal/technical work with no direct user value |
+| **Bug**    | Something broken vs. defined behavior             |
+| **Spike**  | Research or investigation with a time-box         |
+
+### User Story Format
+```
+As a [role],
+I want to [action],
+So that [benefit / value].
+```
+
+### Ticket Template
+```markdown
+## Summary
+[One-line description of what needs to be done]
+
+## Context
+[Why this ticket exists. Link to related spec, PRD, or requirement.]
+
+## Acceptance Criteria
+- [ ] Given / When / Then (use Gherkin format from Section 3)
+
+## Out of Scope
+[Explicitly state what is NOT included to prevent scope creep]
+
+## Dependencies
+- Blocked by: [ticket IDs]
+- Blocks: [ticket IDs]
+
+## Notes for Dev
+[Implementation hints, gotchas, or constraints the BA is aware of]
+```
+
+### Ticket Writing Checklist
+- [ ] Title is action-oriented (starts with a verb)
+- [ ] Acceptance criteria are testable and unambiguous
+- [ ] Out-of-scope section explicitly defined
+- [ ] Dependencies linked
+- [ ] Story points / estimate discussed with dev before finalizing
+
+---
+
+## 7. Change Request & Impact Analysis
+
+### When to Raise a Change Request (CR)
+- Scope changes after sign-off
+- New requirements discovered mid-sprint
+- Business rule changes that affect existing behavior
+- Any API contract change that breaks consumers
+
+### CR Template
+```markdown
+## Change Request: [CR-ID] — [Short title]
+> Raised by: [Name] | Date: {date} | Status: [Draft / Under Review / Approved / Rejected]
+
+## What Changed
+[Clear description — before vs. after]
+
+## Reason / Business Justification
+[Why is this change needed now?]
+
+## Impact Analysis
+
+### Affected Areas
+| Area             | Impact Level (High/Med/Low) | Details |
+|------------------|-----------------------------|---------|
+| API Endpoints    |                             |         |
+| Database Schema  |                             |         |
+| Frontend UI      |                             |         |
+| Business Logic   |                             |         |
+| Existing Tests   |                             |         |
+
+### Effort Estimate
+| Team      | Estimated Effort | Notes |
+|-----------|-----------------|-------|
+| Backend   |                 |       |
+| Frontend  |                 |       |
+| QA        |                 |       |
+
+## Risks
+[What could go wrong if this change is implemented? What if it isn't?]
+
+## Decision
+[ ] Approved — implement in sprint: ___
+[ ] Rejected — reason: ___
+[ ] Deferred — revisit: ___
+```
+
+### Impact Analysis Checklist
+- [ ] All affected areas identified (API, DB, UI, logic, tests)
+- [ ] Effort estimated with dev team input
+- [ ] Risks documented
+- [ ] Stakeholders notified before decision
+- [ ] Related tickets updated or created after approval
+
+---
+
+## 8. Hand-Off Checklist
+
+Before handing off to PM and Dev:
+- [ ] `api_spec.md` fully updated with all endpoints
+- [ ] Business logic has concrete numeric examples, verified manually
+- [ ] At least 3 edge cases have documented handling plans
+- [ ] All requirements have AC in Gherkin format
+- [ ] UI/UX descriptions optimized for mobile-first
+- [ ] Sprint tickets written and reviewed with the dev team
+- [ ] Any change requests documented with full impact analysis
+- [ ] Dev team notified of all significant logic changes

@@ -1,7 +1,7 @@
 # 📋 SPEC: Billing, Settlement & VietQR
 > **Registry IDs:** REQ-004, REQ-006, REQ-011, REQ-013, REQ-016
 > **Owner:** /ba | **Version:** 1.0 | **Date:** 2026-03-25
-> **Depends on:** `milktea-logic.md` §1 (Math Engine), `api_spec.md` §6 (API-011)
+> **Depends on:** `milktea-logic.md` §1 (Math Engine), `api/settlement.md` (API-011)
 
 ---
 

@@ -12,7 +12,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 function StatusBadge({ status }: { status: Session['status'] }) {
   if (status === 'open') return <Badge variant="open">🟢 Mở đơn</Badge>
   if (status === 'locked') return <Badge variant="locked">🔒 Đã chốt</Badge>
-  return <Badge variant="paid">✅ Đã thanh toán</Badge>
+  if (status === 'ordered') return <Badge variant="ordered">📦 Đã đặt</Badge>
+  if (status === 'settling') return <Badge variant="settling">💸 Thu tiền</Badge>
+  if (status === 'completed') return <Badge variant="completed">✅ Hoàn tất</Badge>
+  if (status === 'cancelled') return <Badge variant="cancelled">❌ Đã hủy</Badge>
+  return <Badge variant="default">{status}</Badge>
 }
 
 export default function HistoryPage() {

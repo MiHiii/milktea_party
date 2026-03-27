@@ -153,7 +153,7 @@ export function QrSection({
   billEntries,
   copyToClipboard
 }: QrSectionProps) {
-  if (session.status === 'open') return null
+  if (session.status !== 'settling' && session.status !== 'completed') return null
 
   return (
     <div className="flex flex-col gap-4">

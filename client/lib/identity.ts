@@ -4,7 +4,12 @@ export const DEVICE_ID_KEY = 'milkteaDeviceId'
 
 export function getOrCreateDeviceId(): string {
   if (typeof window === 'undefined') return ''
-  return localStorage.getItem(DEVICE_ID_KEY) || ''
+  let deviceId = localStorage.getItem(DEVICE_ID_KEY)
+  if (!deviceId) {
+    deviceId = crypto.randomUUID()
+    localStorage.setItem(DEVICE_ID_KEY, deviceId)
+  }
+  return deviceId
 }
 
 export function getParticipantId(sessionId: string): string | null {

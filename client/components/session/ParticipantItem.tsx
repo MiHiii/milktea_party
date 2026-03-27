@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { Participant, OrderItem as OrderItemType, Session, OrderBatch } from '@/lib/types'
 import { formatVND, calcSubtotal } from '@/lib/calc'
 import { ChevronDown, Crown } from 'lucide-react'
@@ -49,14 +50,30 @@ export function ParticipantItem({
   isLoading,
   PERCENT_OPTIONS
 }: ParticipantItemProps) {
+  const [now, setNow] = React.useState(Date.now())
+
+  React.useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 15000) // Update every 15s to keep "online" status fresh
+    return () => clearInterval(timer)
+  }, [])
+
+  const lastActive = new Date(participant.lastActive).getTime()
+  const isOnline = (now - lastActive) < 60000
+  const diffMinutes = Math.floor((now - lastActive) / 60000)
+  
+  const offlineText = diffMinutes > 0 ? `offline ${diffMinutes}p` : 'vừa rời đi'
+
   return (
     <div className="group">
       <div 
         className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors text-left cursor-pointer" 
         onClick={onToggleExpand}
       >
-        <div className="w-8 h-8 rounded-full bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sm font-bold text-sky-300">
-          {participant.name.charAt(0).toUpperCase()}
+        <div className="relative">
+          <div className="w-8 h-8 rounded-full bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sm font-bold text-sky-300">
+            {participant.name.charAt(0).toUpperCase()}
+          </div>
+          <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0a0a0c] ${isOnline ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500'}`} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
@@ -64,7 +81,14 @@ export function ParticipantItem({
             <span className="font-medium text-white text-sm">{participant.name}</span>
             {participant.id === myParticipantId && <span className="text-xs text-sky-400">(bạn)</span>}
           </div>
-          <p className="text-xs text-white/40">{items.length} món · {formatVND(calcSubtotal(items))}</p>
+          <p className="text-xs text-white/40">
+            {isOnline ? (
+              <span className="text-emerald-400/60 font-medium">Online · {items.length} món</span>
+            ) : (
+              <span>{offlineText} · {items.length} món</span>
+            )}
+            <span> · {formatVND(calcSubtotal(items))}</span>
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {participant.isPaid ? (
