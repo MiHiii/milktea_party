@@ -12,10 +12,11 @@
 
 | Spec File | Covers | Mô tả |
 |:---|:---|:---|
-| [REQ-session-lifecycle](specs/business/REQ-session-lifecycle.md) | REQ-00001, 00009, 00010, 00014, 00019 | State machine, password, multi-join, cancel, expiry |
-| [REQ-identity-participant](specs/business/REQ-identity-participant.md) | REQ-00002, FEAT-00011 | DeviceID, heartbeat, online/offline status |
-| [REQ-order-management](specs/business/REQ-order-management.md) | REQ-00003, 00007, 00008, 00015 | Batch, pay separate, idempotency, host permissions |
-| [REQ-billing-settlement](specs/business/REQ-billing-settlement.md) | REQ-00004, 00006, 00011, 00013, 00016 | **CRITICAL:** Rounding, allocation, residual, VietQR, discount |
+| [REQ-00001-session-lifecycle](specs/business/REQ-00001-session-lifecycle.md) | REQ-00001, 00009, 00010, 00014, 00019 | State machine, password, multi-join, cancel, expiry |
+| [REQ-00002-identity-participant](specs/business/REQ-00002-identity-participant.md) | REQ-00002, FEAT-00011 | DeviceID, heartbeat, online/offline status |
+| [REQ-00003-order-management](specs/business/REQ-00003-order-management.md) | REQ-00003, 00007, 00008, 00015 | Batch, pay separate, idempotency, host permissions |
+| [REQ-00004-billing-settlement](specs/business/REQ-00004-billing-settlement.md) | REQ-00004, 00006, 00011, 00013, 00016 | **CRITICAL:** Rounding, allocation, residual, VietQR, discount |
+| [REQ-00005-realtime-sync](specs/business/REQ-00005-realtime-sync.md) | REQ-00005, 00012, 00017, 00018 | WebSocket, broadcasting, transactional ops |
 
 ### API Specification
 > Khi file `api_overview.md` quá dài, BA tách thành các module trong `docs/specs/api/`:
@@ -24,8 +25,8 @@
 |:---|:---|:---|
 | Session API | Create, Get, Update Status, Delete | `docs/specs/api/session.md` |
 | Participant API | Join, Leave, Heartbeat | `docs/specs/api/participant.md` |
-| Order API | Add, Update, Delete, Batch | `docs/specs/api/order.md` |
-| Settlement API | Calculate, VietQR, Confirm | `docs/specs/api/settlement.md` |
+| Order API | Items, Batches | `docs/specs/api/order.md` |
+| **Settlement API** | **Calculate Bill (Critical)** | `docs/specs/api/API-00011-settlement.md` |
 
 ---
 
