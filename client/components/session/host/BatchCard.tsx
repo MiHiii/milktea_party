@@ -22,7 +22,8 @@ interface BatchCardProps {
   onUpdatePaymentSource: (batchId: string, source: string) => void
   paymentSources: Record<string, string>
   BANK_OPTIONS: any[]
-  onUpdateBatchBank: (batchId: string, name: string, account: string, qrPayload: string) => void
+  // Cập nhật chữ ký hàm nhận 6 tham số
+  onUpdateBatchBank: (batchId: string, name: string, account: string, qrPayload: string, discount?: number, ship?: number) => void
   onTriggerActionSheet: (batchId: string | null) => void
   batchFinalTotal: string
   setBatchFinalTotal: (val: string) => void
@@ -54,21 +55,14 @@ export function BatchCard({
   const bItems = orderItems.filter(i => i.orderBatchId === batch.id)
   const bTotal = bItems.reduce((s, i) => s + i.price * i.quantity, 0)
   
-  // Logic nguồn thanh toán: Đơn mặc định không có nguồn tham chiếu (nó là gốc)
   const rawSource = paymentSources[batch.id]
   const currentSource = rawSource || 'none'
   const sourceBatch = orderBatches.find(b => b.id === currentSource)
 
-  // Props current values: 
-  // - Đơn mặc định: dùng thông tin đồng bộ từ host session
-  // - Đơn con: LUÔN dùng batch info riêng (để tab "Nhập mới" rỗng khi đang mượn đơn khác)
   const propBankName = batch.isDefault ? (session.hostDefaultBankName || '') : (batch.bankName || '')
   const propBankAcc = batch.isDefault ? (session.hostDefaultBankAccount || '') : (batch.bankAccount || '')
   const qrPayload = batch.isDefault ? session.hostDefaultQrPayload : batch.qrPayload
 
-  // Logic xác định tab nào đang active cho ĐƠN CON
-  // Nếu đang mượn từ một đơn khác (có UUID hợp lệ) -> Tab DÙNG LẠI
-  // Ngược lại -> Tab NHẬP MỚI
   const isCustomTabActive = batch.isDefault || currentSource === 'custom' || currentSource === 'none'
 
   // --- LOCAL STATES ---
@@ -81,14 +75,13 @@ export function BatchCard({
   const lastSavedAcc = React.useRef(propBankAcc)
   const lastSaveTime = React.useRef(0)
 
-  // Sync only when NOT editing and avoid clobbering just-saved data
   React.useEffect(() => {
     if (!isEditingName.current) setLocalName(batch.name)
   }, [batch.name])
 
   React.useEffect(() => {
     const now = Date.now()
-    const isRecentlySaved = (now - lastSaveTime.current) < 3000 // Cooldown 3s
+    const isRecentlySaved = (now - lastSaveTime.current) < 3000
 
     if (!isEditingBank.current) {
       if (propBankAcc === lastSavedAcc.current || !isRecentlySaved) {
@@ -194,7 +187,7 @@ export function BatchCard({
                               setBankNameInput(val)
                               onSaveGlobalBank(val, localBankAcc)
                             } else {
-                              onUpdateBatchBank(batch.id, val, localBankAcc, qrPayload || '')
+                              onUpdateBatchBank(batch.id, val, localBankAcc, qrPayload || '', batch.discountAmount, batch.shippingFee)
                             }
                           }}
                         >
@@ -226,7 +219,7 @@ export function BatchCard({
                                   setBankAccountInput(localBankAcc)
                                   onSaveGlobalBank(localBankName, localBankAcc)
                                 } else {
-                                  onUpdateBatchBank(batch.id, localBankName, localBankAcc, qrPayload || '')
+                                  onUpdateBatchBank(batch.id, localBankName, localBankAcc, qrPayload || '', batch.discountAmount, batch.shippingFee)
                                 }
                               }
                             }}
@@ -263,12 +256,8 @@ export function BatchCard({
                       <SelectContent className="bg-slate-800 border-white/10">
                         {orderBatches
                           .filter(b => {
-                            if (b.id === batch.id) return false // Không hiện chính nó
-                            if (b.isDefault) return true // Đơn mặc định luôn là nguồn hợp lệ
-                            
-                            // Đơn con chỉ hiển thị nếu:
-                            // 1. Đang ở chế độ "Nhập STK riêng" (custom)
-                            // 2. VÀ thực sự đã có dữ liệu (bankAccount hoặc qrPayload)
+                            if (b.id === batch.id) return false
+                            if (b.isDefault) return true
                             const bSource = paymentSources[b.id]
                             return bSource === 'custom' && (b.bankAccount || b.qrPayload)
                           })
@@ -299,6 +288,8 @@ export function BatchCard({
                 </div>
               )}
             </div>
+            
+            {/* INPUT CHI PHÍ RIÊNG CHO BATCH */}
             <div className="grid grid-cols-2 gap-3">
                <div className="space-y-2">
                   <label className="text-[9px] font-black text-white/20 uppercase ml-1">Giảm giá (Voucher)</label>
