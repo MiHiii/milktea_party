@@ -59,6 +59,11 @@ export const api = {
       fetcher<Session>(`/sessions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     listByHost: (hostDeviceId: string) => fetcher<Session[]>(`/sessions?hostDeviceId=${hostDeviceId}`),
     listByIDs: (ids: string[]) => fetcher<Session[]>(`/sessions/batch?ids=${ids.join(',')}`),
+    claimHost: (slug: string, adminSecret: string) => 
+      fetcher<{ success: boolean }>(`/sessions/slug/${slug}/claim-host`, { 
+        method: 'POST', 
+        body: JSON.stringify({ adminSecret }) 
+      }),
   },
   participants: {
     getBySession: (sessionId: string) => fetcher<Participant[]>(`/participants/session/${sessionId}`),

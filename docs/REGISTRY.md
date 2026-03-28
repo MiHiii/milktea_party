@@ -1,7 +1,7 @@
 # 📊 Milktea Party — Task Registry & Progress Tracking (v4.0)
 
 **Project Status:** 🌀 **SPRINT 1 IN PROGRESS** | **Global Health:** ⚠️ 1 Bug Pending
-**Last Sync:** 2026-03-27T00:00 (Updated by /pm)
+**Last Sync:** 2026-03-28T11:00 (Updated by /pm)
 
 > **Convention**: ID dùng 5 chữ số zero-padded (VD: `FEAT-00001`). Xem `skills/SKILL_PM.md` để biết rules.
 
@@ -17,17 +17,9 @@
 | [REQ-00003-order-management](specs/business/REQ-00003-order-management.md) | REQ-00003, 00007, 00008, 00015 | Batch, pay separate, idempotency, host permissions |
 | [REQ-00004-billing-settlement](specs/business/REQ-00004-billing-settlement.md) | REQ-00004, 00006, 00011, 00013, 00016 | **CRITICAL:** Rounding, allocation, residual, VietQR, discount |
 | [REQ-00005-realtime-sync](specs/business/REQ-00005-realtime-sync.md) | REQ-00005, 00012, 00017, 00018 | WebSocket, broadcasting, transactional ops |
+| [TTD-00020-host-recovery](specs/tech/TTD-00020-host-recovery.md) | REQ-00020 | **NEW:** Host Recovery & Admin Secret Design |
 
 ### API Specification
-> Khi file `api_overview.md` quá dài, BA tách thành các module trong `docs/specs/api/`:
-
-| Spec Module | Covers | File |
-|:---|:---|:---|
-| Session API | Create, Get, Update Status, Delete | `docs/specs/api/session.md` |
-| Participant API | Join, Leave, Heartbeat | `docs/specs/api/participant.md` |
-| Order API | Items, Batches | `docs/specs/api/order.md` |
-| **Settlement API** | **Calculate Bill (Critical)** | `docs/specs/api/API-00011-settlement.md` |
-
 ---
 
 ## 🏗️ 2. CORE BUSINESS LOGIC (Nghiệp vụ cốt lõi)
@@ -40,6 +32,7 @@
 | **REQ-00004** | REQ-00004 | S1 | Math: Rounding 1k & Residuals | ⏳ | ⏳ | 🏗️ | `IN_ANALYSIS` | **High Priority** - Cần BA spec |
 | **REQ-00005** | REQ-00005 | S1 | Real-time Sync (WebSocket) | ✅ | 🏗️ | 🏗️ | `IN_PROGRESS` | Cần cơ chế Re-sync khi mất WS |
 | **REQ-00009** | REQ-00009 | S1 | Session Password Protection | 🏗️ | ⏳ | 🏗️ | `IN_PROGRESS` | Cần chuyển sang bcrypt |
+| **REQ-00020** | REQ-00020 | S1 | Host Recovery & Re-binding Logic | ✅ | ✅ | ✅ | `DONE` | 2-min Grace Period & Rate Limit 3/hr |
 
 ---
 
@@ -52,6 +45,7 @@
 | **FEAT-00011** | REQ-00002 | S1 | UI: Participant Online Status | ✅ | ✅ | ✅ | `DONE` | Dot xanh/đỏ trạng thái & Heartbeat sync |
 | **FEAT-00012** | REQ-00001 | S1 | UI: Dynamic Action Buttons | ✅ | ✅ | ✅ | `DONE` | Ẩn/hiện nút theo status |
 | **FEAT-00013** | — | S1 | UI Hardening: Price Freeze & Sync | ⏳ | ⏳ | 🏗️ | `BACKLOG` | Khóa giá lúc SETTLING, báo mất mạng |
+| **FEAT-00020** | REQ-00020 | S1 | UI: Admin Secret Banner & Recovery | ✅ | ✅ | ✅ | `DONE` | Banner, Toast & Modal khôi phục |
 
 ---
 
@@ -65,23 +59,8 @@
 | **API-00004** | REQ-00002 | S1 | `/api/participants` (Join) | POST | ✅ | ✅ | ✅ | `DONE` | FIXED: Response shape & naming |
 | **API-00005** | REQ-00003 | S1 | `/api/order-items` (Add) | POST | ✅ | ✅ | ✅ | `DONE` | FIXED: IDOR & convention |
 | **API-00022** | REQ-00001 | S1 | Session State (Validation) | — | ✅ | ✅ | ✅ | `DONE` | Added Transaction FOR UPDATE - QC Passed |
-
----
-
-## 🏗️ 5. INFRASTRUCTURE & DEVOPS
-
-| ID | REQ Ref | Sprint | Task | DEV | TEST | QC | Status | Ghi chú |
-| :--- | :--- | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
-| **OPS-00001** | — | S0 | CI/CD Pipeline Setup | ✅ | ✅ | ✅ | `DONE` | GitHub Actions |
-| **OPS-00002** | — | S1 | Staging Environment | ⏳ | ⏳ | ⏳ | `BACKLOG` | Railway / Docker |
-
----
-
-## 📐 6. ARCHITECTURE & TECH DEBT
-
-| ID | REQ Ref | Sprint | Task | DEV | TEST | QC | Status | Ghi chú |
-| :--- | :--- | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
-| **REFAC-00001** | — | — | Refactor order service | ⏳ | ⏳ | ⏳ | `BACKLOG` | Split into sub-services |
+| **API-00023** | REQ-00020 | S1 | Create Session (Return secret) | POST | ✅ | ✅ | ✅ | `DONE` | Migration & Hashing logic |
+| **API-00024** | REQ-00020 | S1 | `/api/sessions/slug/:slug/claim-host` | POST | ✅ | ✅ | ✅ | `DONE` | Heartbeat & Re-binding logic |
 
 ---
 
@@ -98,10 +77,10 @@
 ### Sprint 1 — Summary
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | 15 |
-| **Done** | 11 |
-| **In Progress** | 1 |
-| **Backlog** | 3 |
+| **Total Tasks** | 19 |
+| **Done** | 15 |
+| **In Progress** | 3 |
+| **Backlog** | 1 |
 | **Open Bugs** | 0 |
 | **Velocity** | — (first sprint) |
 
@@ -117,4 +96,3 @@
 ---
 
 *Ghi chú quản lý: /pm đã khóa Sprint 1. Mọi thay đổi ngoài danh sách trên phải đưa vào Backlog.*
-

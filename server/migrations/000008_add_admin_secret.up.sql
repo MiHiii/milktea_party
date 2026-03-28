@@ -1,0 +1,2 @@
+ALTER TABLE sessions 
+ADD COLUMN admin_secret_hash VARCHAR(255) NOT NULL DEFAULT '';

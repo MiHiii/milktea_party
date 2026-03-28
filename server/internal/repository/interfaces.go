@@ -18,6 +18,10 @@ type SessionRepository interface {
 	ListByHost(ctx context.Context, hostDeviceID uuid.UUID) ([]domain.Session, error)
 	ListByIDs(ctx context.Context, ids []uuid.UUID) ([]domain.Session, error)
 	CleanupOldSessions(ctx context.Context, days int) (int64, error)
+
+	ParticipantRepo() ParticipantRepository
+	OrderBatchRepo() OrderBatchRepository
+	OrderItemRepo() OrderItemRepository
 }
 
 type ParticipantRepository interface {

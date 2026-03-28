@@ -316,3 +316,51 @@ func (h *SessionHandler) VerifyPassword(c *gin.Context) {
 		"data": gin.H{"success": true},
 	})
 }
+
+func (h *SessionHandler) ClaimHost(c *gin.Context) {
+	slug := c.Param("slug")
+	var req struct {
+		AdminSecret string `json:"adminSecret"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"code":    "VALIDATION_FAILED",
+				"message": err.Error(),
+			},
+		})
+		return
+	}
+
+	// Use device ID from middleware as the new host
+	deviceID := middleware.GetDeviceID(c)
+
+	if err := h.svc.ClaimHost(c.Request.Context(), slug, req.AdminSecret, deviceID); err != nil {
+		status := http.StatusUnprocessableEntity
+		code := "PROCESS_FAILED"
+		
+		if strings.Contains(err.Error(), "invalid admin secret") {
+			status = http.StatusUnauthorized
+			code = "UNAUTHORIZED"
+		} else if strings.Contains(err.Error(), "still active") {
+			status = http.StatusForbidden
+			code = "FORBIDDEN"
+		} else if strings.Contains(err.Error(), "must join") {
+			status = http.StatusBadRequest
+			code = "BAD_REQUEST"
+		}
+
+		c.JSON(status, gin.H{
+			"error": gin.H{
+				"code":    code,
+				"message": err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": gin.H{"success": true},
+	})
+}

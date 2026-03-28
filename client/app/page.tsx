@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { getOrCreateDeviceId, setParticipantId } from '@/lib/identity'
+import { getOrCreateDeviceId, setParticipantId, saveHostSecret } from '@/lib/identity'
 import { api } from '@/lib/api'
 import { generateSlug } from '@/lib/slug'
 

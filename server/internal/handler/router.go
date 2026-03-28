@@ -25,6 +25,7 @@ func (r *Router) Register(engine *gin.Engine) {
 			sessions.GET("/:id", r.Session.GetByID)
 			sessions.GET("/slug/:slug", r.Session.GetBySlug)
 			sessions.POST("/slug/:slug/verify", r.Session.VerifyPassword)
+			sessions.POST("/slug/:slug/claim-host", r.Session.ClaimHost)
 			sessions.PUT("/:id", r.Session.Update)
 			sessions.DELETE("/:id", r.Session.Delete)
 		}

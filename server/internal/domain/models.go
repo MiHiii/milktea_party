@@ -34,6 +34,8 @@ type Session struct {
 	BatchConfigs           []byte    `json:"batchConfigs" db:"batch_configs"` // JSONB
 	Password               *string   `json:"password,omitempty" db:"password"` // Allow unmarshaling but hide if empty in responses
 	HasPassword            bool      `json:"hasPassword" db:"-"`              // Virtual field
+	AdminSecret            string    `json:"adminSecret,omitempty" db:"-"`    // Return only once on create
+	AdminSecretHash        string    `json:"-" db:"admin_secret_hash"`        // Never expose in JSON
 	CreatedAt              time.Time `json:"createdAt" db:"created_at"`
 }
 

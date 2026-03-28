@@ -29,3 +29,16 @@ export function isHost(hostDeviceId: string): boolean {
   const deviceId = getOrCreateDeviceId()
   return deviceId === hostDeviceId
 }
+
+export function saveHostSecret(slug: string, secret: string): void {
+  if (typeof window === 'undefined') return
+  const secrets = JSON.parse(localStorage.getItem('host_secrets') || '{}')
+  secrets[slug] = secret
+  localStorage.setItem('host_secrets', JSON.stringify(secrets))
+}
+
+export function getHostSecret(slug: string): string | null {
+  if (typeof window === 'undefined') return null
+  const secrets = JSON.parse(localStorage.getItem('host_secrets') || '{}')
+  return secrets[slug] || null
+}

@@ -204,6 +204,7 @@ export function HostSettings({
             onToggleSplitBatch={onToggleSplitBatch}
             onTogglePassword={onTogglePassword}
             onSavePassword={onSavePassword}
+            slug={session.slug}
           />
 
           {!hasSubOrders ? (

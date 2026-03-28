@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math/big"
 	"strings"
+	"sync"
 	"time"
 
 	"milktea-server/internal/domain"
@@ -17,14 +18,28 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type attemptRecord struct {
+	count       int
+	lastAttempt time.Time
+}
+
 type sessionService struct {
 	repo            repository.SessionRepository
 	participantRepo repository.ParticipantRepository
 	hub             *websocket.Hub
+
+	// Rate limiting for ClaimHost
+	claimAttempts   map[string]*attemptRecord
+	claimMu         sync.RWMutex
 }
 
 func NewSessionService(repo repository.SessionRepository, participantRepo repository.ParticipantRepository, hub *websocket.Hub) SessionService {
-	return &sessionService{repo: repo, participantRepo: participantRepo, hub: hub}
+	return &sessionService{
+		repo:            repo,
+		participantRepo: participantRepo,
+		hub:             hub,
+		claimAttempts:   make(map[string]*attemptRecord),
+	}
 }
 
 var validTransitions = map[string][]string{
@@ -50,12 +65,22 @@ func validateTransition(from, to string) error {
 }
 
 const roomIDCharset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+const adminSecretCharset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 func generateRoomID(length int) string {
 	b := make([]byte, length)
 	for i := range b {
 		num, _ := rand.Int(rand.Reader, big.NewInt(int64(len(roomIDCharset))))
 		b[i] = roomIDCharset[num.Int64()]
+	}
+	return string(b)
+}
+
+func generateAdminSecret(length int) string {
+	b := make([]byte, length)
+	for i := range b {
+		num, _ := rand.Int(rand.Reader, big.NewInt(int64(len(adminSecretCharset))))
+		b[i] = adminSecretCharset[num.Int64()]
 	}
 	return string(b)
 }
@@ -85,23 +110,33 @@ func (s *sessionService) Create(ctx context.Context, session *domain.Session, ho
 		session.Password = &strHashed
 	}
 
+	// Generate Admin Secret
+	adminSecret := generateAdminSecret(6)
+	hashedSecret, err := bcrypt.GenerateFromPassword([]byte(adminSecret), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash admin secret: %w", err)
+	}
+	session.AdminSecretHash = string(hashedSecret)
+	session.AdminSecret = adminSecret
+
 	// Retry loop to handle RoomID collisions
 	maxRetries := 5
-	var err error
+	var createErr error
 
 	for i := 0; i < maxRetries; i++ {
 		if session.RoomID == "" || i > 0 {
 			session.RoomID = generateRoomID(6)
 		}
 
-		err = s.repo.Create(ctx, session)
-		if err == nil {
+		createErr = s.repo.Create(ctx, session)
+		if createErr == nil {
 			// Success creating session, now create the host participant
 			host := &domain.Participant{
-				SessionID: session.ID,
-				DeviceID:  session.HostDeviceID,
-				Name:      hostName,
-				IsHost:    true,
+				SessionID:  session.ID,
+				DeviceID:   session.HostDeviceID,
+				Name:       hostName,
+				IsHost:     true,
+				LastActive: time.Now(),
 			}
 
 			if err := s.participantRepo.Create(ctx, host); err != nil {
@@ -112,12 +147,12 @@ func (s *sessionService) Create(ctx context.Context, session *domain.Session, ho
 			return host, nil
 		}
 
-		if strings.Contains(err.Error(), "unique") || strings.Contains(err.Error(), "23505") {
+		if strings.Contains(createErr.Error(), "unique") || strings.Contains(createErr.Error(), "23505") {
 			slog.Warn("RoomID collision detected, retrying...", "room_id", session.RoomID, "attempt", i+1)
 			continue
 		}
 
-		return nil, err
+		return nil, createErr
 	}
 
 	return nil, fmt.Errorf("failed to generate a unique RoomID after %d attempts", maxRetries)
@@ -217,6 +252,7 @@ func (s *sessionService) Update(ctx context.Context, session *domain.Session, re
 
 		// Preserve critical fields
 		session.HostDeviceID = existing.HostDeviceID
+		session.AdminSecretHash = existing.AdminSecretHash
 		session.CreatedAt = existing.CreatedAt
 
 		if session.DiscountValue == 0 {
@@ -231,6 +267,115 @@ func (s *sessionService) Update(ctx context.Context, session *domain.Session, re
 			s.hub.Broadcast(session.ID.String(), "session_updated", session)
 		}
 		return err
+	})
+}
+
+func (s *sessionService) ClaimHost(ctx context.Context, slug string, adminSecret string, newHostDeviceID uuid.UUID) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	// 0. Rate Limiting Check
+	key := newHostDeviceID.String()
+	s.claimMu.Lock()
+	record, exists := s.claimAttempts[key]
+	if exists {
+		// Reset count if last attempt was more than 1 hour ago
+		if time.Since(record.lastAttempt) > time.Hour {
+			record.count = 0
+		}
+		if record.count >= 3 {
+			s.claimMu.Unlock()
+			return fmt.Errorf("too many failed attempts, please try again in an hour")
+		}
+	} else {
+		record = &attemptRecord{}
+		s.claimAttempts[key] = record
+	}
+	s.claimMu.Unlock()
+
+	return s.repo.WithTx(ctx, func(txRepo repository.SessionRepository) error {
+		// 1. Get Session
+		session, err := txRepo.GetBySlug(ctx, slug)
+		if err != nil {
+			return err
+		}
+		if session == nil {
+			return fmt.Errorf("session not found")
+		}
+
+		// 2. Verify Admin Secret
+		if err := bcrypt.CompareHashAndPassword([]byte(session.AdminSecretHash), []byte(adminSecret)); err != nil {
+			// Increment failure count
+			s.claimMu.Lock()
+			record.count++
+			record.lastAttempt = time.Now()
+			s.claimMu.Unlock()
+			return fmt.Errorf("invalid admin secret")
+		}
+
+		// Reset count on success
+		s.claimMu.Lock()
+		delete(s.claimAttempts, key)
+		s.claimMu.Unlock()
+
+		// 3. Check Heartbeat of current host
+		participants, err := txRepo.ParticipantRepo().GetBySessionID(ctx, session.ID)
+		if err != nil {
+			return err
+		}
+
+		var currentHost *domain.Participant
+		var newHost *domain.Participant
+
+		for i := range participants {
+			if participants[i].DeviceID == session.HostDeviceID {
+				currentHost = &participants[i]
+			}
+			if participants[i].DeviceID == newHostDeviceID {
+				newHost = &participants[i]
+			}
+		}
+
+		if currentHost != nil {
+			// If host has been active in the last 2 minutes, don't allow claim
+			if time.Since(currentHost.LastActive) < 2*time.Minute {
+				return fmt.Errorf("current host is still active (active %v ago)", time.Since(currentHost.LastActive).Round(time.Second))
+			}
+		}
+
+		if newHost == nil {
+			return fmt.Errorf("you must join the session before claiming host")
+		}
+
+		// 4. Atomic Update
+		// a. Update Session host_device_id
+		session.HostDeviceID = newHostDeviceID
+		if err := txRepo.Update(ctx, session); err != nil {
+			return err
+		}
+
+		// b. Update old host participant status
+		if currentHost != nil {
+			currentHost.IsHost = false
+			if err := txRepo.ParticipantRepo().Update(ctx, currentHost); err != nil {
+				return err
+			}
+		}
+
+		// c. Update new host participant status
+		newHost.IsHost = true
+		if err := txRepo.ParticipantRepo().Update(ctx, newHost); err != nil {
+			return err
+		}
+
+		// 5. Broadcast change
+		s.hub.Broadcast(session.ID.String(), "host_changed", map[string]any{
+			"new_host_name":      newHost.Name,
+			"new_host_device_id": newHost.DeviceID,
+			"timestamp":          time.Now(),
+		})
+
+		return nil
 	})
 }
 

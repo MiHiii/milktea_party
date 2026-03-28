@@ -9,7 +9,7 @@ import {
   Lock, Crown, ChevronDown, ArrowLeft, Settings, Eye, EyeOff, Check, Copy, Camera, Image as ImageIcon, ShoppingCart,
   Trash2, Play, CheckCircle2, XCircle, Banknote, Unlock
 } from 'lucide-react'
-import { getOrCreateDeviceId, getParticipantId, setParticipantId, isHost } from '@/lib/identity'
+import { getOrCreateDeviceId, getParticipantId, setParticipantId, isHost, getHostSecret } from '@/lib/identity'
 import { calculateBill, formatVND } from '@/lib/calc'
 import { BANK_OPTIONS, parseVietQR } from '@/lib/vietqr'
 import { Session, Participant, OrderItem as OrderItemType, BillEntry, OrderBatch } from '@/lib/types'
@@ -94,6 +94,13 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   const [qrPreviewUrl, setQrPreviewUrl] = useState<string | null>(null)
   const [showChangeToast, setShowChangeToast] = useState(false)
   
+  // Host Recovery State
+  const [showSecretBanner, setShowSecretBanner] = useState(false)
+  const [recoveryModalOpen, setRecoveryModalOpen] = useState(false)
+  const [recoverySecret, setRecoverySecret] = useState('')
+  const [recoveryError, setRecoveryError] = useState('')
+  const [adminSecretPlain, setAdminSecretPlain] = useState<string | null>(null)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const nameInputRef = useRef('')
@@ -125,7 +132,31 @@ export default function SessionClient({ initialSession, initialParticipants, ini
         setExpandedParticipant(hostP.id)
       } else setNameModalOpen(true)
     } else setNameModalOpen(true)
+
+    // Check for admin secret if host
+    if (amHost) {
+      const secret = getHostSecret(initialSession.slug)
+      if (secret) {
+        setAdminSecretPlain(secret)
+        setShowSecretBanner(true)
+      }
+    }
   }, [initialSession, initialParticipants])
+
+  const claimHost = useCallback(async () => {
+    setIsLoading(true)
+    setRecoveryError('')
+    try {
+      await api.sessions.claimHost(session.slug, recoverySecret)
+      setRecoveryModalOpen(false)
+      setRecoverySecret('')
+      // WS will broadcast host_changed, which we handle
+    } catch (e: any) {
+      setRecoveryError(e.message || 'Sai mã quản trị hoặc Host cũ vẫn đang online')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [session.slug, recoverySecret])
 
   // 2. WebSocket & Realtime Sync
   const fetchLatestData = useCallback(async () => {
@@ -193,6 +224,13 @@ export default function SessionClient({ initialSession, initialParticipants, ini
             break
           case 'order_batch_deleted':
             setOrderBatches(prev => prev.filter(b => b.id !== payload.id))
+            break
+          case 'host_changed':
+            setSession(prev => ({ ...prev, hostDeviceId: payload.new_host_device_id }))
+            setIAmHost(isHost(payload.new_host_device_id))
+            setShowChangeToast(true)
+            setTimeout(() => setShowChangeToast(false), 5000)
+            fetchLatestData() // Refresh participants to see new host flag
             break
         }
       } catch (e) {
@@ -566,6 +604,36 @@ export default function SessionClient({ initialSession, initialParticipants, ini
       </header>
 
       <div className="max-w-2xl mx-auto px-4 pt-3 flex flex-col gap-3">
+        {/* Admin Secret Banner for Host */}
+        {iAmHost && showSecretBanner && adminSecretPlain && (
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Crown className="w-5 h-5 text-amber-400" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] text-amber-400 font-black uppercase tracking-wider">Mã quản trị (Admin Secret)</p>
+                <p className="text-lg font-mono font-bold text-white tracking-widest">{adminSecretPlain}</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" className="h-9 px-3 rounded-xl text-amber-400 hover:bg-amber-500/10" onClick={() => { copyToClipboard(adminSecretPlain); setCopied(true); setTimeout(() => setCopied(false), 2000) }}>
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              </Button>
+              <Button size="sm" variant="ghost" className="h-9 w-9 p-0 rounded-xl text-white/40 hover:bg-white/5" onClick={() => setShowSecretBanner(false)}>
+                <XCircle className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Change Toast */}
+        {showChangeToast && (
+          <div className="bg-emerald-500/90 text-white rounded-2xl px-4 py-3 flex items-center gap-3 shadow-xl animate-in slide-in-from-bottom-4 fixed bottom-6 left-4 right-4 z-50 md:left-auto md:right-6 md:w-80">
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+            <p className="text-sm font-bold">Quyền Host đã được cập nhật!</p>
+          </div>
+        )}
         {session.status === 'cancelled' && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
             <Card className="w-full max-w-sm rounded-[2.5rem] bg-slate-900 border-rose-500/20 p-8 text-center shadow-2xl">
@@ -660,6 +728,13 @@ export default function SessionClient({ initialSession, initialParticipants, ini
             )}
           </div> 
         )}
+
+        {/* Recovery Button for Non-Host */}
+        {!iAmHost && session.status !== 'completed' && session.status !== 'cancelled' && (
+          <button onClick={() => setRecoveryModalOpen(true)} className="mt-4 text-[10px] text-white/20 hover:text-sky-400 uppercase font-black text-center w-full flex items-center justify-center gap-1.5">
+            <Crown className="w-3 h-3" /> Bạn là Host? Khôi phục quyền
+          </button>
+        )}
       </div>
 
       <HostSettings 
@@ -685,6 +760,28 @@ export default function SessionClient({ initialSession, initialParticipants, ini
         <DialogContent className="rounded-[2.5rem] bg-slate-900 border-white/10">
           <DialogHeader><DialogTitle>🤔 Là bạn?</DialogTitle><DialogDescription>Tên &ldquo;{claimCandidate?.name}&rdquo; đã có.</DialogDescription></DialogHeader>
           <DialogFooter className="flex gap-3"><Button variant="outline" className="flex-1 rounded-2xl h-12" onClick={() => { setClaimModalOpen(false); setNameModalOpen(true) }}>Không</Button><Button className="flex-1 rounded-2xl h-12 font-bold bg-blue-600" onClick={confirmClaim}>Đúng!</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={recoveryModalOpen} onOpenChange={setRecoveryModalOpen}>
+        <DialogContent className="rounded-[2.5rem] bg-slate-900 border-white/10">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Crown className="w-5 h-5 text-amber-400" /> Khôi phục quyền Host</DialogTitle>
+            <DialogDescription>Nhập mã quản trị 6 ký tự để lấy lại quyền quản lý phòng này.</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <Input 
+              placeholder="Mã quản trị (VD: MT789X)" 
+              value={recoverySecret} 
+              onChange={e => { setRecoverySecret(e.target.value.toUpperCase()); setRecoveryError('') }} 
+              className="rounded-2xl h-12 font-mono text-center text-lg tracking-widest"
+              maxLength={6}
+            />
+            {recoveryError && <p className="text-xs text-rose-400 bg-rose-500/10 p-2 rounded-lg">{recoveryError}</p>}
+          </div>
+          <DialogFooter>
+            <Button onClick={claimHost} disabled={isLoading || recoverySecret.length < 6} className="w-full rounded-2xl h-12 font-bold bg-blue-600">Xác nhận</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
