@@ -34,7 +34,38 @@ type Session struct {
 	BatchConfigs           []byte    `json:"batchConfigs" db:"batch_configs"` // JSONB
 	Password               *string   `json:"password,omitempty" db:"password"` // Allow unmarshaling but hide if empty in responses
 	HasPassword            bool      `json:"hasPassword" db:"-"`              // Virtual field
+	AdminSecret            string    `json:"adminSecret,omitempty" db:"-"`    // Return only once on create
+	AdminSecretHash        string    `json:"-" db:"admin_secret_hash"`        // Never expose in JSON
 	CreatedAt              time.Time `json:"createdAt" db:"created_at"`
+}
+
+type BillResult struct {
+	SessionID       uuid.UUID         `json:"sessionId"`
+	ActualTotal     int64             `json:"actualTotal"`
+	CalculatedTotal int64             `json:"calculatedTotal"`
+	GlobalResidual  int64             `json:"globalResidual"`
+	Participants    []ParticipantBill `json:"participants"`
+}
+
+type ParticipantBill struct {
+	ParticipantID uuid.UUID  `json:"participantId"`
+	Name          string     `json:"name"`
+	IsHost        bool       `json:"isHost"`
+	Subtotal      int64      `json:"subtotal"` // Sum of rounded items
+	Residual      int64      `json:"residual"` // Only for Host
+	FinalAmount   int64      `json:"finalAmount"`
+	Items         []BillItem `json:"items"`
+}
+
+type BillItem struct {
+	ItemID        uuid.UUID `json:"itemId"`
+	ItemName      string    `json:"itemName"`
+	Price         int64     `json:"price"`         // Original price
+	Quantity      int       `json:"quantity"`      // Original quantity
+	RawPrice      float64   `json:"rawPrice"`      // After allocation, before rounding
+	RoundedPrice  int64     `json:"roundedPrice"`  // After rounding 1k
+	IsPaySeparate bool      `json:"isPaySeparate"`
+	BatchName     string    `json:"batchName"`
 }
 
 type Participant struct {
@@ -55,19 +86,21 @@ type OrderBatch struct {
 	BankAccount *string   `json:"bankAccount" db:"bank_account"`
 	QrPayload   *string   `json:"qrPayload" db:"qr_payload"`
 	Status      string    `json:"status" db:"status"`
-	IsDefault   bool      `json:"isDefault" db:"is_default"`
-	SortOrder   int       `json:"sortOrder" db:"sort_order"`
-	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
-}
+	IsDefault      bool      `json:"isDefault" db:"is_default"`
+	SortOrder      int       `json:"sortOrder" db:"sort_order"`
+	DiscountAmount int64     `json:"discountAmount" db:"discount_amount"`
+	ShippingFee    int64     `json:"shippingFee" db:"shipping_fee"`
+	CreatedAt      time.Time `json:"createdAt" db:"created_at"`
+	}
 
 type OrderItem struct {
 	ID            uuid.UUID  `json:"id" db:"id"`
-	ParticipantID uuid.UUID  `json:"participantId" db:"participant_id"`
-	SessionID     uuid.UUID  `json:"sessionId" db:"session_id"`
+	ParticipantID uuid.UUID  `json:"participantId" db:"participant_id" binding:"required"`
+	SessionID     uuid.UUID  `json:"sessionId" db:"session_id" binding:"required"`
 	OrderBatchID  *uuid.UUID `json:"orderBatchId" db:"order_batch_id"`
-	ItemName      string     `json:"itemName" db:"item_name"`
-	Price         int64      `json:"price" db:"price"`
-	Quantity      int        `json:"quantity" db:"quantity"`
+	ItemName      string     `json:"itemName" db:"item_name" binding:"required"`
+	Price         int64      `json:"price" db:"price" binding:"min=0"`
+	Quantity      int        `json:"quantity" db:"quantity" binding:"required,gt=0"`
 	Note          *string    `json:"note" db:"note"`
 	Ice           *string    `json:"ice" db:"ice"`
 	Sugar         *string    `json:"sugar" db:"sugar"`

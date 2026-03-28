@@ -2,10 +2,11 @@
 
 import * as React from 'react'
 import { Session } from '@/lib/types'
-import { Users, Lock, Loader2 } from 'lucide-react'
+import { Users, Lock, Loader2, Crown, Eye, EyeOff, Copy, Check } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { getHostSecret } from '@/lib/identity'
 
 interface SessionConfigProps {
   session: Session
@@ -18,6 +19,7 @@ interface SessionConfigProps {
   onToggleSplitBatch: (isSplit: boolean) => void
   onTogglePassword: (enabled: boolean) => void
   onSavePassword: () => void
+  slug: string
 }
 
 export function SessionConfig({
@@ -30,11 +32,41 @@ export function SessionConfig({
   setHostPasswordDraft,
   onToggleSplitBatch,
   onTogglePassword,
-  onSavePassword
+  onSavePassword,
+  slug
 }: SessionConfigProps) {
+  const [showSecret, setShowSecret] = React.useState(false)
+  const [copied, setCopied] = React.useState(false)
+  const adminSecret = getHostSecret(slug)
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   return (
     <section className="space-y-4">
-      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-1">Cấu hình phiên</label>
+      <div className="flex items-center justify-between px-1">
+        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Cấu hình phiên</label>
+        {adminSecret && (
+          <div className="flex items-center gap-2 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
+            <Crown className="w-3 h-3 text-amber-400" />
+            <span className="text-[10px] font-bold text-amber-400 font-mono tracking-widest">{showSecret ? adminSecret : '******'}</span>
+            <button onClick={() => setShowSecret(!showSecret)} className="text-amber-400/50 hover:text-amber-400">
+              {showSecret ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+            </button>
+            <button onClick={() => copyToClipboard(adminSecret)} className="text-amber-400/50 hover:text-amber-400">
+              {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+            </button>
+          </div>
+        )}
+      </div>
+      {adminSecret && (
+        <p className="text-[10px] text-white/20 mt-[-12px] px-1 italic">
+          * Dùng mã này để khôi phục quyền Host nếu bạn đổi trình duyệt hoặc mất dữ liệu thiết bị.
+        </p>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Card className={`p-4 rounded-3xl flex items-center justify-between border-white/10 transition-all ${hasSubOrders ? 'bg-emerald-500/5 ring-1 ring-emerald-500/20' : 'bg-white/5'}`}>
           <div className="flex items-center gap-3">
@@ -51,14 +83,7 @@ export function SessionConfig({
               type="checkbox" 
               className="sr-only peer" 
               checked={hasSubOrders} 
-              onChange={(e) => {
-                const isTurningOff = !e.target.checked;
-                if (isTurningOff) {
-                  const ok = window.confirm("Hành động này sẽ gộp tất cả món ăn về một đơn duy nhất (Đơn 1). Thông tin ngân hàng của Đơn 1 sẽ được lưu làm thông tin mặc định cho Host. Bạn có chắc chắn không?");
-                  if (!ok) return;
-                }
-                onToggleSplitBatch(e.target.checked);
-              }} 
+              onChange={(e) => onToggleSplitBatch(e.target.checked)} 
               disabled={isToggling} 
             />
             <div className="w-11 h-6 bg-white/10 rounded-full peer peer-checked:bg-emerald-500 transition-colors relative">

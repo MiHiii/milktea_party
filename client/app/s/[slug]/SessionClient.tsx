@@ -9,7 +9,7 @@ import {
   Lock, Crown, ChevronDown, ArrowLeft, Settings, Eye, EyeOff, Check, Copy, Camera, Image as ImageIcon, ShoppingCart,
   Trash2, Play, CheckCircle2, XCircle, Banknote, Unlock
 } from 'lucide-react'
-import { getOrCreateDeviceId, getParticipantId, setParticipantId, isHost } from '@/lib/identity'
+import { getOrCreateDeviceId, getParticipantId, setParticipantId, isHost, getHostSecret } from '@/lib/identity'
 import { calculateBill, formatVND } from '@/lib/calc'
 import { BANK_OPTIONS, parseVietQR } from '@/lib/vietqr'
 import { Session, Participant, OrderItem as OrderItemType, BillEntry, OrderBatch } from '@/lib/types'
@@ -29,6 +29,7 @@ import { QrSection } from '@/components/session/QrSection'
 import { BillSummary } from '@/components/session/BillSummary'
 import { ConfirmModal } from '@/components/session/ConfirmModal'
 import { ActionSheet } from '@/components/ui/ActionSheet'
+import { HostSecretToast } from '@/components/session/HostSecretToast'
 
 interface Props {
   initialSession: Session
@@ -94,9 +95,54 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   const [qrPreviewUrl, setQrPreviewUrl] = useState<string | null>(null)
   const [showChangeToast, setShowChangeToast] = useState(false)
   
+  // Host Recovery State
+  const [showHostSecretToast, setShowHostSecretToast] = useState(false)
+  const [recoveryModalOpen, setRecoveryModalOpen] = useState(false)
+  const [recoverySecret, setRecoverySecret] = useState('')
+  const [recoveryHostName, setRecoveryHostName] = useState('')
+  const [recoveryError, setRecoveryError] = useState('')
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const nameInputRef = useRef('')
+
+  // Moved up to ensure scope availability
+  const onTogglePassword = useCallback(async (enabled: boolean) => {
+    if (!enabled) {
+      setConfirmConfig({
+        isOpen: true,
+        title: 'Gỡ mật khẩu?',
+        description: 'Bất kỳ ai có link đều có thể vào xem và đặt món. Bạn có chắc chắn không?',
+        variant: 'destructive',
+        onConfirm: async () => {
+          setIsLoading(true)
+          try {
+            await api.sessions.update(session.id, { password: null } as any)
+            setSession(prev => ({ ...prev, hasPassword: false }))
+            setShowPasswordEdit(false)
+            setConfirmConfig(prev => ({ ...prev, isOpen: false }))
+          } finally {
+            setIsLoading(false)
+          }
+        }
+      })
+    } else {
+      setShowPasswordEdit(true)
+    }
+  }, [session.id])
+
+  const onSavePassword = useCallback(async () => {
+    if (!hostPasswordDraft) return
+    setIsLoading(true)
+    try {
+      await api.sessions.update(session.id, { password: hostPasswordDraft } as any)
+      setSession(prev => ({ ...prev, hasPassword: true }))
+      setShowPasswordEdit(false)
+      setHostPasswordDraft('')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [session.id, hostPasswordDraft])
 
   const showWarning = (title: string, description: ReactNode) => {
     setConfirmConfig({ isOpen: true, title, description, variant: 'primary', onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false })) })
@@ -125,10 +171,46 @@ export default function SessionClient({ initialSession, initialParticipants, ini
         setExpandedParticipant(hostP.id)
       } else setNameModalOpen(true)
     } else setNameModalOpen(true)
+
+    // Check for admin secret if host
+    if (amHost) {
+      const secret = getHostSecret(initialSession.slug)
+      if (secret) {
+        // Auto-show toast for newly created rooms
+        const isNew = sessionStorage.getItem(`newlyCreated_${initialSession.id}`)
+        if (isNew === 'true') {
+          setShowHostSecretToast(true)
+        }
+      }
+    }
   }, [initialSession, initialParticipants])
+
+  const claimHost = useCallback(async () => {
+    const myName = participants.find(p => p.id === myParticipantId)?.name
+    if (!myName) return
+
+    setIsLoading(true)
+    setRecoveryError('')
+    try {
+      await api.sessions.claimHost(session.slug, recoverySecret, myName)
+      setRecoveryModalOpen(false)
+      setRecoverySecret('')
+      // WS will broadcast host_changed, which we handle
+    } catch (e: any) {
+      setRecoveryError(e.message || 'Sai mã quản trị hoặc Host cũ vẫn đang online')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [session.slug, recoverySecret, myParticipantId, participants])
+
+  const lastFetchTime = useRef<number>(0)
 
   // 2. WebSocket & Realtime Sync
   const fetchLatestData = useCallback(async () => {
+    const now = Date.now()
+    if (now - lastFetchTime.current < 5000) return // Throttle: 5s
+    lastFetchTime.current = now
+
     try {
       const [s, p, i, b] = await Promise.all([
         api.sessions.getBySlug(session.slug),
@@ -137,11 +219,17 @@ export default function SessionClient({ initialSession, initialParticipants, ini
         api.orderBatches.getBySession(session.id)
       ])
       setSession(s)
-      setParticipants(p)
-      setOrderItems(i)
-      setOrderBatches(b)
-    } catch (e) {
+      setParticipants(p || [])
+      setOrderItems(i || [])
+      setOrderBatches(b || [])
+    } catch (e: any) {
       console.error('Failed to re-sync data:', e)
+      // Reset timer on error to allow retry
+      if (e.message?.includes('Rate limit')) {
+        lastFetchTime.current = now + 30000 // Block for 30s if rate limited
+      } else {
+        lastFetchTime.current = 0 
+      }
     }
   }, [session.id, session.slug])
 
@@ -193,6 +281,13 @@ export default function SessionClient({ initialSession, initialParticipants, ini
             break
           case 'order_batch_deleted':
             setOrderBatches(prev => prev.filter(b => b.id !== payload.id))
+            break
+          case 'host_changed':
+            setSession(prev => ({ ...prev, hostDeviceId: payload.new_host_device_id }))
+            setIAmHost(isHost(payload.new_host_device_id))
+            setShowChangeToast(true)
+            setTimeout(() => setShowChangeToast(false), 5000)
+            fetchLatestData() // Refresh participants to see new host flag
             break
         }
       } catch (e) {
@@ -391,8 +486,20 @@ export default function SessionClient({ initialSession, initialParticipants, ini
     })
   }, [])
 
-  const onUpdateBatchBank = useCallback(async (batchId: string, n: string, a: string, q: string) => { 
-    try { await api.orderBatches.update(batchId, { bankName: n, bankAccount: a, qrPayload: q }) } catch { } 
+  const onUpdateBatchName = useCallback(async (batchId: string, newName: string) => { 
+    try { await api.orderBatches.update(batchId, { name: newName }) } catch { } 
+  }, [])
+
+  const onUpdateBatchBank = useCallback(async (batchId: string, n: string, a: string, q: string, discount?: number, ship?: number) => { 
+    try { 
+      await api.orderBatches.update(batchId, { 
+        bankName: n, 
+        bankAccount: a, 
+        qrPayload: q,
+        discountAmount: discount,
+        shippingFee: ship
+      }) 
+    } catch { } 
   }, [])
 
   const onSaveGlobalBank = useCallback(async (name?: string, account?: string) => { 
@@ -404,19 +511,39 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   }, [session.id, bankNameInput, bankAccountInput])
 
   const onToggleSplitBatch = useCallback(async (isSplit: boolean) => {
-    setIsToggling(true)
-    // Optimistic Update
-    setSession(prev => ({ ...prev, isSplitBatch: isSplit }))
-    
-    try { 
-      await api.sessions.update(session.id, { 
-        isSplitBatch: isSplit
-      }) 
-    } catch (e) {
-      // Rollback on error
-      setSession(prev => ({ ...prev, isSplitBatch: !isSplit }))
-    } finally { 
-      setIsToggling(false) 
+    const performToggle = async () => {
+      setIsToggling(true)
+      // Optimistic Update
+      setSession(prev => ({ ...prev, isSplitBatch: isSplit }))
+      
+      try { 
+        await api.sessions.update(session.id, { 
+          isSplitBatch: isSplit
+        }) 
+        // Important: Fetch latest batches immediately to get "Đơn 1" if newly enabled
+        const updatedBatches = await api.orderBatches.getBySession(session.id)
+        setOrderBatches(updatedBatches || [])
+      } catch (e) {
+        // Rollback on error
+        setSession(prev => ({ ...prev, isSplitBatch: !isSplit }))
+      } finally { 
+        setIsToggling(false) 
+      }
+    }
+
+    if (!isSplit) {
+      setConfirmConfig({
+        isOpen: true,
+        title: 'Tắt chia đơn?',
+        description: 'Hành động này sẽ gộp tất cả món ăn về một đơn duy nhất. Toàn bộ đợt đơn con sẽ bị xoá. Bạn có chắc chắn không?',
+        variant: 'destructive',
+        onConfirm: () => {
+          setConfirmConfig(prev => ({ ...prev, isOpen: false }))
+          performToggle()
+        }
+      })
+    } else {
+      performToggle()
     }
   }, [session.id])
 
@@ -488,12 +615,14 @@ export default function SessionClient({ initialSession, initialParticipants, ini
                 setBankAccountInput(result.bankAccount)
                 onSaveGlobalBank(result.bankName, result.bankAccount)
               }
-              alert('🛍️ Đã nhận diện được số tài khoản!')
+              // Toast or small notification instead of alert
+              setShowChangeToast(true)
+              setTimeout(() => setShowChangeToast(false), 3000)
             } else {
-              alert('Nhận diện được mã nhưng không tìm thấy số tài khoản hợp lệ.')
+              showWarning('Không tìm thấy STK', 'Nhận diện được mã nhưng không tìm thấy số tài khoản hợp lệ.')
             }
           } else {
-            alert('Không nhận diện được mã QR. Bạn hãy thử chụp lại rõ hơn nhé!')
+            showWarning('Lỗi quét mã', 'Không nhận diện được mã QR. Bạn hãy thử chụp lại rõ hơn nhé!')
           }
         }
         img.src = e.target?.result as string
@@ -566,6 +695,16 @@ export default function SessionClient({ initialSession, initialParticipants, ini
       </header>
 
       <div className="max-w-2xl mx-auto px-4 pt-3 flex flex-col gap-3">
+        {showChangeToast && (
+          <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 animate-in slide-in-from-top-2">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+              <p className="text-sm font-bold">Quyền Host đã được cập nhật!</p>
+            </div>
+            <button onClick={() => setShowChangeToast(false)}><XCircle className="w-4 h-4 text-emerald-500/40" /></button>
+          </div>
+        )}
+
         {session.status === 'cancelled' && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
             <Card className="w-full max-w-sm rounded-[2.5rem] bg-slate-900 border-rose-500/20 p-8 text-center shadow-2xl">
@@ -587,6 +726,17 @@ export default function SessionClient({ initialSession, initialParticipants, ini
             <p className="text-4xl font-black text-white tabular-nums">{formatVND(myBill.total)}</p> 
           </div> 
         )}
+
+        {/* Host Secret Toast (The 10s Inline Window) */}
+        {showHostSecretToast && getHostSecret(session.slug) && (
+          <HostSecretToast 
+            secretCode={getHostSecret(session.slug)!} 
+            onClose={() => {
+              setShowHostSecretToast(false)
+              sessionStorage.removeItem(`newlyCreated_${session.id}`)
+            }} 
+          />
+        )}
         
         {canEdit && ( 
           <Card className="rounded-[2.5rem] border-white/5 bg-white/[0.02]"> 
@@ -598,12 +748,12 @@ export default function SessionClient({ initialSession, initialParticipants, ini
         )}
 
         <Card className="rounded-[2.5rem] border-white/5 bg-white/[0.02]"> 
-          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4 text-sky-400" />Đơn hàng ({participants.length} người)</CardTitle></CardHeader> 
+          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4 text-sky-400" />Đơn hàng ({(participants || []).length} người)</CardTitle></CardHeader> 
           <CardContent className="p-0"> 
             <div className="divide-y divide-white/5"> 
-              {participants.map(p => (
+              {(participants || []).map(p => (
                 <ParticipantItem 
-                  key={p.id} participant={p} items={orderItems.filter(i => i.participantId === p.id)} session={session} orderBatches={orderBatches} 
+                  key={p.id} participant={p} items={(orderItems || []).filter(i => i.participantId === p.id)} session={session} orderBatches={orderBatches} 
                   myParticipantId={myParticipantId} iAmHost={iAmHost} isExpanded={expandedParticipant === p.id} onToggleExpand={() => setExpandedParticipant(expandedParticipant === p.id ? null : p.id)} 
                   editingItemId={editingItemId} editDraft={editDraft} setEditDraft={setEditDraft} onStartEdit={startEdit} onSaveEdit={saveEdit} onCancelEdit={() => setEditingItemId(null)} 
                   onDeleteItem={deleteItem} onCopyItem={(i) => { addItemForm.reset({ itemName: i.itemName, price: i.price, quantity: i.quantity, note: i.note || '', ice: i.ice || '50%', sugar: i.sugar || '50%', orderBatchId: i.orderBatchId, paySeparate: !!i.paySeparate }); window.scrollTo({ top: 0, behavior: 'smooth' }) }} 
@@ -614,7 +764,7 @@ export default function SessionClient({ initialSession, initialParticipants, ini
           </CardContent> 
         </Card>
 
-        {billEntries.length > 0 && orderItems.length > 0 && ( 
+        {billEntries.length > 0 && (orderItems || []).length > 0 && ( 
           <div className="flex flex-col gap-3"> 
             <button onClick={() => setShowBillSummary(!showBillSummary)} className="w-full h-14 rounded-[1.5rem] bg-sky-500/10 border border-sky-500/20 text-sky-400 font-black uppercase text-xs flex items-center justify-center gap-2 transition-all">
               <Receipt className="w-4 h-4" />{showBillSummary ? 'Ẩn bảng tạm tính' : 'Xem bảng tạm tính'}
@@ -660,6 +810,16 @@ export default function SessionClient({ initialSession, initialParticipants, ini
             )}
           </div> 
         )}
+
+        {/* Recovery Button: Only shown if current participant name matches the host's name but device ID doesn't */}
+        {!iAmHost && 
+         session.status !== 'completed' && 
+         session.status !== 'cancelled' && 
+         participants.find(p => p.id === myParticipantId)?.name === participants.find(p => p.isHost)?.name && (
+          <button onClick={() => setRecoveryModalOpen(true)} className="mt-4 text-[10px] text-white/20 hover:text-sky-400 uppercase font-black text-center w-full flex items-center justify-center gap-1.5 transition-colors">
+            <Crown className="w-3 h-3" /> Bạn là {participants.find(p => p.isHost)?.name}? Khôi phục quyền Host
+          </button>
+        )}
       </div>
 
       <HostSettings 
@@ -668,8 +828,8 @@ export default function SessionClient({ initialSession, initialParticipants, ini
         batchNameDraft={batchNameDraft} setBatchNameDraft={setBatchNameDraft} showNewBatch={showNewBatch} setShowNewBatch={setShowNewBatch} newBatchDraft={newBatchDraft} setNewBatchDraft={setNewBatchDraft} 
         bankNameInput={bankNameInput} setBankNameInput={setBankNameInput} bankAccountInput={bankAccountInput} setBankAccountInput={setBankAccountInput} 
         showPasswordEdit={showPasswordEdit} hostPasswordDraft={hostPasswordDraft} setHostPasswordDraft={setHostPasswordDraft} 
-        onSaveBatchTotal={onSaveBatchTotal} onAddBatch={onAddBatch} onDeleteBatch={onDeleteBatch} onUpdateBatchName={() => {}} onUpdateBatchBank={onUpdateBatchBank} 
-        onToggleSplitBatch={onToggleSplitBatch} onTogglePassword={() => {}} onSavePassword={() => {}} onSaveGlobalBank={onSaveGlobalBank} 
+        onSaveBatchTotal={onSaveBatchTotal} onAddBatch={onAddBatch} onDeleteBatch={onDeleteBatch} onUpdateBatchName={onUpdateBatchName} onUpdateBatchBank={onUpdateBatchBank} 
+        onToggleSplitBatch={onToggleSplitBatch} onTogglePassword={onTogglePassword} onSavePassword={onSavePassword} onSaveGlobalBank={onSaveGlobalBank} 
         onTriggerActionSheet={(bId) => { setSelectedBatchId(bId || null); setShowActionSheet(true) }} BANK_OPTIONS={BANK_OPTIONS} 
       />
 
@@ -685,6 +845,28 @@ export default function SessionClient({ initialSession, initialParticipants, ini
         <DialogContent className="rounded-[2.5rem] bg-slate-900 border-white/10">
           <DialogHeader><DialogTitle>🤔 Là bạn?</DialogTitle><DialogDescription>Tên &ldquo;{claimCandidate?.name}&rdquo; đã có.</DialogDescription></DialogHeader>
           <DialogFooter className="flex gap-3"><Button variant="outline" className="flex-1 rounded-2xl h-12" onClick={() => { setClaimModalOpen(false); setNameModalOpen(true) }}>Không</Button><Button className="flex-1 rounded-2xl h-12 font-bold bg-blue-600" onClick={confirmClaim}>Đúng!</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={recoveryModalOpen} onOpenChange={setRecoveryModalOpen}>
+        <DialogContent className="rounded-[2.5rem] bg-slate-900 border-white/10">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Crown className="w-5 h-5 text-amber-400" /> Khôi phục quyền Host</DialogTitle>
+            <DialogDescription>Nhập mã quản trị để lấy lại quyền quản lý phòng này.</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <Input 
+              placeholder="Mã quản trị (6 ký tự)" 
+              value={recoverySecret} 
+              onChange={e => { setRecoverySecret(e.target.value.toUpperCase()); setRecoveryError('') }} 
+              className="rounded-2xl h-12 font-mono text-center text-lg tracking-widest"
+              maxLength={6}
+            />
+            {recoveryError && <p className="text-xs text-rose-400 bg-rose-500/10 p-2 rounded-lg">{recoveryError}</p>}
+          </div>
+          <DialogFooter>
+            <Button onClick={claimHost} disabled={isLoading || recoverySecret.length < 6} className="w-full rounded-2xl h-12 font-bold bg-blue-600 uppercase">Xác nhận khôi phục</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -168,7 +168,7 @@ export function OrderForm({
               onClick={() => !isReadOnly && setValue('paySeparate', !watch('paySeparate'))} 
               className="text-xs text-white/50 cursor-pointer select-none font-medium hover:text-white/70 transition-colors"
             >
-              Tạo mã QR thanh toán riêng cho món này
+              Thanh toán riêng (Không chia ship/voucher)
             </span>
           </div>
           <button 

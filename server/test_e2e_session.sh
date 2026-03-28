@@ -1,5 +1,5 @@
 #!/bin/bash
-# E2E Test for Session Lifecycle (REQ-001)
+# E2E Test for Session Lifecycle (REQ-00001)
 
 BASE_URL="http://localhost:8080/api"
 HOST_ID="550e8400-e29b-41d4-a716-446655440001"

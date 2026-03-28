@@ -18,6 +18,10 @@ type SessionRepository interface {
 	ListByHost(ctx context.Context, hostDeviceID uuid.UUID) ([]domain.Session, error)
 	ListByIDs(ctx context.Context, ids []uuid.UUID) ([]domain.Session, error)
 	CleanupOldSessions(ctx context.Context, days int) (int64, error)
+
+	ParticipantRepo() ParticipantRepository
+	OrderBatchRepo() OrderBatchRepository
+	OrderItemRepo() OrderItemRepository
 }
 
 type ParticipantRepository interface {
@@ -31,15 +35,19 @@ type ParticipantRepository interface {
 
 type OrderBatchRepository interface {
 	Create(ctx context.Context, batch *domain.OrderBatch) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.OrderBatch, error)
 	GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]domain.OrderBatch, error)
+	GetDefaultBatch(ctx context.Context, sessionID uuid.UUID) (*domain.OrderBatch, error)
 	Update(ctx context.Context, batch *domain.OrderBatch) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
 type OrderItemRepository interface {
 	Create(ctx context.Context, item *domain.OrderItem) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.OrderItem, error)
 	GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]domain.OrderItem, error)
 	GetByParticipantID(ctx context.Context, participantID uuid.UUID) ([]domain.OrderItem, error)
 	Update(ctx context.Context, item *domain.OrderItem) error
+	BulkUpdateBatch(ctx context.Context, sessionID uuid.UUID, oldBatchID *uuid.UUID, newBatchID *uuid.UUID) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }

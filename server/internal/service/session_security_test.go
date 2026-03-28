@@ -58,6 +58,21 @@ func (m *MockSessionRepo) GetBySlug(ctx context.Context, slug string) (*domain.S
 	return args.Get(0).(*domain.Session), args.Error(1)
 }
 
+func (m *MockSessionRepo) ParticipantRepo() repository.ParticipantRepository {
+	args := m.Called()
+	return args.Get(0).(repository.ParticipantRepository)
+}
+
+func (m *MockSessionRepo) OrderBatchRepo() repository.OrderBatchRepository {
+	args := m.Called()
+	return args.Get(0).(repository.OrderBatchRepository)
+}
+
+func (m *MockSessionRepo) OrderItemRepo() repository.OrderItemRepository {
+	args := m.Called()
+	return args.Get(0).(repository.OrderItemRepository)
+}
+
 type MockParticipantRepo struct {
 	mock.Mock
 	repository.ParticipantRepository

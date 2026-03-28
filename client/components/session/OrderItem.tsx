@@ -180,7 +180,7 @@ export function OrderItem({
             onClick={() => setEditDraft((d: any) => ({ ...d, paySeparate: !editDraft.paySeparate }))}
             className="text-xs text-white/50 cursor-pointer select-none font-medium hover:text-white/70 transition-colors"
           >
-            Tạo mã QR thanh toán riêng cho món này
+            Thanh toán riêng (Không chia ship/voucher)
           </span>
         </div>
 
@@ -215,6 +215,9 @@ export function OrderItem({
               const b = orderBatches.find(bt => bt.id === item.orderBatchId);
               return b ? (<span className="text-[8px] font-black text-emerald-400/50 uppercase tracking-tighter bg-emerald-500/5 px-1.5 py-0.5 rounded-full border border-emerald-500/5">{b.name}</span>) : null
             })()}
+            {item.paySeparate && (
+              <span className="text-[8px] font-black text-sky-400/50 uppercase tracking-tighter bg-sky-500/5 px-1.5 py-0.5 rounded-full border border-sky-500/5">Tự trả riêng</span>
+            )}
             {(item.note || item.ice || item.sugar) && (
               <div className="flex flex-wrap gap-x-2 gap-y-0.5 opacity-25">
                 {item.note && <span className="text-[9px] italic truncate max-w-[120px]">{item.note}</span>}

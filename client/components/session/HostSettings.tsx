@@ -51,7 +51,7 @@ interface HostSettingsProps {
   onAddBatch: () => void
   onDeleteBatch: (batchId: string, name: string) => void
   onUpdateBatchName: (batchId: string, newName: string) => void
-  onUpdateBatchBank: (batchId: string, name: string, account: string, qrPayload: string) => void
+  onUpdateBatchBank: (batchId: string, name: string, account: string, qrPayload: string, discount?: number, ship?: number) => void
   onToggleSplitBatch: (isSplit: boolean) => void
   onTogglePassword: (enabled: boolean) => void
   onSavePassword: () => void
@@ -204,6 +204,7 @@ export function HostSettings({
             onToggleSplitBatch={onToggleSplitBatch}
             onTogglePassword={onTogglePassword}
             onSavePassword={onSavePassword}
+            slug={session.slug}
           />
 
           {!hasSubOrders ? (

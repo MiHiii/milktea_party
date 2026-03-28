@@ -18,6 +18,8 @@ export interface OrderBatch {
   status: 'open' | 'locked' | 'ordered' | 'settling' | 'completed' | 'cancelled' | 'paid'
   isDefault: boolean
   sortOrder: number
+  discountAmount: number
+  shippingFee: number
   createdAt: string
 }
 
@@ -40,6 +42,7 @@ export interface Session {
   useDefaultQrForAll: boolean
   hasPassword?: boolean
   password?: string | null // For session creation/verification
+  adminSecret?: string     // Plaintext secret returned only once on create
   createdAt: string
 }
 

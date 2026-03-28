@@ -1,5 +1,5 @@
-# 📋 SPEC: Identity & Participant Management
-> **Registry IDs:** REQ-002, FEAT-011
+﻿# 📋 SPEC: Identity & Participant Management
+> **Registry IDs:** REQ-00002, FEAT-00011
 > **Owner:** /ba | **Version:** 1.0 | **Date:** 2026-03-25
 > **Depends on:** `api_overview.md` §C (Participant Logic)
 
@@ -11,7 +11,7 @@ Hệ thống Milktea Party KHÔNG yêu cầu đăng ký tài khoản. Mọi ngư
 
 ---
 
-## 2. REQ-002: DeviceID Identity & Heartbeat
+## 2. REQ-00002: DeviceID Identity & Heartbeat
 
 ### 2.1 Luồng định danh
 
@@ -45,7 +45,7 @@ Hệ thống Milktea Party KHÔNG yêu cầu đăng ký tài khoản. Mọi ngư
 - Trong MỘT session, mỗi DeviceID chỉ map tới MỘT Participant
 - Nếu Guest quay lại phòng (cùng DeviceID + cùng SessionID) → trả về data cũ, KHÔNG tạo mới
 
-### 2.3 Heartbeat Mechanism (API-008)
+### 2.3 Heartbeat Mechanism (API-00008)
 
 **Mục đích:** Cho Host biết Guest nào đang online.
 
@@ -98,7 +98,7 @@ Then Host thấy Guest chuyển sang "Offline"
 
 ---
 
-## 3. FEAT-011: UI Participant Online/Offline Status
+## 3. FEAT-00011: UI Participant Online/Offline Status
 
 ### 3.1 Mô tả
 Hiển thị indicator (dot xanh/đỏ) bên cạnh tên mỗi Participant để Host biết ai đang online.
@@ -163,3 +163,5 @@ CREATE INDEX idx_participants_session ON participants(session_id);
 
 ---
 *Spec này là nguồn chân lý cho /dev. Mọi thắc mắc liên hệ /ba.*
+
+

@@ -51,20 +51,21 @@ func main() {
 	// 5. Initialize Repositories
 	sessionRepo := repository.NewSessionRepository(dbPool)
 	participantRepo := repository.NewParticipantRepository(dbPool)
-	orderBatchRepo := repository.NewOrderBatchRepository(dbPool)
 	orderItemRepo := repository.NewOrderItemRepository(dbPool)
 
 	// 6. Initialize Services
 	sessionSvc := service.NewSessionService(sessionRepo, participantRepo, wsHub)
 	participantSvc := service.NewParticipantService(participantRepo, wsHub)
-	orderItemSvc := service.NewOrderItemService(orderItemRepo, sessionRepo, wsHub)
-	orderBatchSvc := service.NewOrderBatchService(orderBatchRepo, wsHub)
+	orderItemSvc := service.NewOrderItemService(orderItemRepo, sessionRepo, participantRepo, wsHub)
+	orderBatchSvc := service.NewOrderBatchService(sessionRepo, wsHub)
+	billingSvc := service.NewBillingService(sessionRepo)
 
 	// 7. Initialize Handlers
 	sessionHdl := handler.NewSessionHandler(sessionSvc)
 	participantHdl := handler.NewParticipantHandler(participantSvc)
 	orderItemHdl := handler.NewOrderItemHandler(orderItemSvc)
 	orderBatchHdl := handler.NewOrderBatchHandler(orderBatchSvc)
+	billingHdl := handler.NewBillingHandler(billingSvc)
 
 	// 8. Setup Router
 	router := gin.New()
@@ -97,6 +98,7 @@ func main() {
 		Participant: participantHdl,
 		OrderItem:   orderItemHdl,
 		OrderBatch:  orderBatchHdl,
+		Billing:     billingHdl,
 	}
 	appRouter.Register(router)
 
