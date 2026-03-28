@@ -10,9 +10,11 @@ type Router struct {
 	Participant *ParticipantHandler
 	OrderItem   *OrderItemHandler
 	OrderBatch  *OrderBatchHandler
-}
+	Billing     *BillingHandler
+	}
 
-func (r *Router) Register(engine *gin.Engine) {
+	func (r *Router) Register(engine *gin.Engine) {
+
 	api := engine.Group("/api")
 	api.Use(middleware.DeviceIDMiddleware())
 	{
@@ -26,6 +28,7 @@ func (r *Router) Register(engine *gin.Engine) {
 			sessions.GET("/slug/:slug", r.Session.GetBySlug)
 			sessions.POST("/slug/:slug/verify", r.Session.VerifyPassword)
 			sessions.POST("/slug/:slug/claim-host", r.Session.ClaimHost)
+			sessions.GET("/:id/calculate", r.Billing.Calculate)
 			sessions.PUT("/:id", r.Session.Update)
 			sessions.DELETE("/:id", r.Session.Delete)
 		}

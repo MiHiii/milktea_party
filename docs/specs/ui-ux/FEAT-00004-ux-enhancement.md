@@ -1,11 +1,11 @@
-# 📋 SPEC: UX Enhancements & Vietnam Market
-> **Registry IDs:** FEAT-004, FEAT-005, FEAT-006, FEAT-009, FEAT-010
+﻿# 📋 SPEC: UX Enhancements & Vietnam Market
+> **Registry IDs:** FEAT-00004, FEAT-00005, FEAT-00006, FEAT-00009, FEAT-00010
 > **Owner:** /ba | **Version:** 1.0 | **Date:** 2026-03-25
 > **Depends on:** `SKILL_BA.md` §4 (UX & Vietnam Market Insights)
 
 ---
 
-## 1. FEAT-004: Session History
+## 1. FEAT-00004: Session History
 
 ### 1.1 Mô tả
 Người dùng xem lại các phòng cũ đã tham gia hoặc tạo. Dữ liệu lấy từ `localStorage` (lưu danh sách sessionId) + API.
@@ -31,7 +31,7 @@ Người dùng xem lại các phòng cũ đã tham gia hoặc tạo. Dữ liệu
 ### 1.3 Luồng kỹ thuật
 1. **localStorage:** Lưu array `joinedSessionIds: string[]`
 2. Mỗi lần vào phòng mới → push sessionId vào array
-3. Trang History → gọi `GET /api/sessions/batch?ids=id1,id2,id3` (API-010)
+3. Trang History → gọi `GET /api/sessions/batch?ids=id1,id2,id3` (API-00010)
 4. Hiển thị danh sách, sort theo `createdAt` desc
 
 ### 1.4 Frontend route: `/history` (đã có `history/page.tsx`)
@@ -46,7 +46,7 @@ And hiện trạng thái (COMPLETED/CANCELLED) + số tiền đã trả
 
 ---
 
-## 2. FEAT-005: Real-time Notifications
+## 2. FEAT-00005: Real-time Notifications
 
 ### 2.1 Mô tả
 Thông báo toast khi có sự kiện quan trọng từ WebSocket.
@@ -84,7 +84,7 @@ function handleWSEvent(type: string, data: any) {
 
 ---
 
-## 3. FEAT-006: Open Graph / Zalo Share Preview
+## 3. FEAT-00006: Open Graph / Zalo Share Preview
 
 ### 3.1 Mô tả
 Khi chia sẻ link phòng lên Zalo/Facebook, hiển thị preview đẹp với thumbnail + tiêu đề.
@@ -123,7 +123,7 @@ Then hiện thumbnail ảnh OG + tiêu đề phòng + số người tham gia
 
 ---
 
-## 4. FEAT-009: Error Boundary & Offline Handling
+## 4. FEAT-00009: Error Boundary & Offline Handling
 
 ### 4.1 Mô tả
 Xử lý gracefully khi:
@@ -175,7 +175,7 @@ function connectWS(sessionId: string) {
 
 ---
 
-## 5. FEAT-010: Host Confirmation Dialogs
+## 5. FEAT-00010: Host Confirmation Dialogs
 
 ### 5.1 Mô tả
 Các hành động quan trọng cần dialog xác nhận:
@@ -204,3 +204,5 @@ interface Props {
 
 ---
 *Spec này là nguồn chân lý cho /dev. Mọi thắc mắc liên hệ /ba.*
+
+

@@ -35,7 +35,9 @@ type ParticipantRepository interface {
 
 type OrderBatchRepository interface {
 	Create(ctx context.Context, batch *domain.OrderBatch) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.OrderBatch, error)
 	GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]domain.OrderBatch, error)
+	GetDefaultBatch(ctx context.Context, sessionID uuid.UUID) (*domain.OrderBatch, error)
 	Update(ctx context.Context, batch *domain.OrderBatch) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
@@ -46,5 +48,6 @@ type OrderItemRepository interface {
 	GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]domain.OrderItem, error)
 	GetByParticipantID(ctx context.Context, participantID uuid.UUID) ([]domain.OrderItem, error)
 	Update(ctx context.Context, item *domain.OrderItem) error
+	BulkUpdateBatch(ctx context.Context, sessionID uuid.UUID, oldBatchID *uuid.UUID, newBatchID *uuid.UUID) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }

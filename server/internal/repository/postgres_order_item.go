@@ -129,6 +129,25 @@ func (r *postgresOrderItemRepository) Update(ctx context.Context, i *domain.Orde
 	return nil
 }
 
+func (r *postgresOrderItemRepository) BulkUpdateBatch(ctx context.Context, sessionID uuid.UUID, oldBatchID *uuid.UUID, newBatchID *uuid.UUID) error {
+	var query string
+	var args []any
+
+	if oldBatchID == nil {
+		query = `UPDATE order_items SET order_batch_id = $1 WHERE session_id = $2 AND order_batch_id IS NULL`
+		args = []any{newBatchID, sessionID}
+	} else {
+		query = `UPDATE order_items SET order_batch_id = $1 WHERE session_id = $2 AND order_batch_id = $3`
+		args = []any{newBatchID, sessionID, *oldBatchID}
+	}
+
+	_, err := r.db.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to bulk update order items: %w", err)
+	}
+	return nil
+}
+
 func (r *postgresOrderItemRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM order_items WHERE id = $1`
 	_, err := r.db.Exec(ctx, query, id)

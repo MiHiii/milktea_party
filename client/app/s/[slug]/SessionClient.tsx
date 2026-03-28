@@ -429,8 +429,20 @@ export default function SessionClient({ initialSession, initialParticipants, ini
     })
   }, [])
 
-  const onUpdateBatchBank = useCallback(async (batchId: string, n: string, a: string, q: string) => { 
-    try { await api.orderBatches.update(batchId, { bankName: n, bankAccount: a, qrPayload: q }) } catch { } 
+  const onUpdateBatchName = useCallback(async (batchId: string, newName: string) => { 
+    try { await api.orderBatches.update(batchId, { name: newName }) } catch { } 
+  }, [])
+
+  const onUpdateBatchBank = useCallback(async (batchId: string, n: string, a: string, q: string, discount?: number, ship?: number) => { 
+    try { 
+      await api.orderBatches.update(batchId, { 
+        bankName: n, 
+        bankAccount: a, 
+        qrPayload: q,
+        discountAmount: discount,
+        shippingFee: ship
+      }) 
+    } catch { } 
   }, [])
 
   const onSaveGlobalBank = useCallback(async (name?: string, account?: string) => { 
@@ -743,7 +755,7 @@ export default function SessionClient({ initialSession, initialParticipants, ini
         batchNameDraft={batchNameDraft} setBatchNameDraft={setBatchNameDraft} showNewBatch={showNewBatch} setShowNewBatch={setShowNewBatch} newBatchDraft={newBatchDraft} setNewBatchDraft={setNewBatchDraft} 
         bankNameInput={bankNameInput} setBankNameInput={setBankNameInput} bankAccountInput={bankAccountInput} setBankAccountInput={setBankAccountInput} 
         showPasswordEdit={showPasswordEdit} hostPasswordDraft={hostPasswordDraft} setHostPasswordDraft={setHostPasswordDraft} 
-        onSaveBatchTotal={onSaveBatchTotal} onAddBatch={onAddBatch} onDeleteBatch={onDeleteBatch} onUpdateBatchName={() => {}} onUpdateBatchBank={onUpdateBatchBank} 
+        onSaveBatchTotal={onSaveBatchTotal} onAddBatch={onAddBatch} onDeleteBatch={onDeleteBatch} onUpdateBatchName={onUpdateBatchName} onUpdateBatchBank={onUpdateBatchBank} 
         onToggleSplitBatch={onToggleSplitBatch} onTogglePassword={() => {}} onSavePassword={() => {}} onSaveGlobalBank={onSaveGlobalBank} 
         onTriggerActionSheet={(bId) => { setSelectedBatchId(bId || null); setShowActionSheet(true) }} BANK_OPTIONS={BANK_OPTIONS} 
       />

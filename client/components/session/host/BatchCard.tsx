@@ -299,12 +299,41 @@ export function BatchCard({
                 </div>
               )}
             </div>
+            <div className="grid grid-cols-2 gap-3">
+               <div className="space-y-2">
+                  <label className="text-[9px] font-black text-white/20 uppercase ml-1">Giảm giá (Voucher)</label>
+                  <div className="relative">
+                    <Input 
+                      type="number" 
+                      placeholder="0"
+                      className="h-10 bg-black/60 border-white/5 rounded-xl text-sm font-bold text-rose-400 pl-9" 
+                      value={batch.discountAmount || ''} 
+                      onChange={(e) => onUpdateBatchBank(batch.id, localBankName, localBankAcc, qrPayload || '', Number(e.target.value), batch.shippingFee)} 
+                    />
+                    <Receipt className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-rose-500/40" />
+                  </div>
+               </div>
+               <div className="space-y-2">
+                  <label className="text-[9px] font-black text-white/20 uppercase ml-1">Phí Ship</label>
+                  <div className="relative">
+                    <Input 
+                      type="number" 
+                      placeholder="0"
+                      className="h-10 bg-black/60 border-white/5 rounded-xl text-sm font-bold text-sky-400 pl-9" 
+                      value={batch.shippingFee || ''} 
+                      onChange={(e) => onUpdateBatchBank(batch.id, localBankName, localBankAcc, qrPayload || '', batch.discountAmount, Number(e.target.value))} 
+                    />
+                    <Receipt className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-sky-500/40" />
+                  </div>
+               </div>
+            </div>
+
             <div className="space-y-2">
-               <label className="text-[9px] font-black text-white/20 uppercase ml-1">Số tiền thực thanh toán (Đơn này)</label>
+               <label className="text-[9px] font-black text-white/20 uppercase ml-1">Số tiền thực thanh toán (Snapshot)</label>
                <div className="relative">
                  <Input 
                    type="number" 
-                   placeholder={String(bTotal)}
+                   placeholder={String(bTotal - (batch.discountAmount || 0) + (batch.shippingFee || 0))}
                    className="h-12 bg-black/60 border-white/5 rounded-xl text-base font-bold text-emerald-400 pl-10" 
                    value={batchFinalTotal} 
                    onChange={(e) => setBatchFinalTotal(e.target.value)} 

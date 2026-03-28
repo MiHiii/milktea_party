@@ -262,9 +262,55 @@ func (s *sessionService) Update(ctx context.Context, session *domain.Session, re
 			session.ShippingFee = existing.ShippingFee
 		}
 
+		// --- Multi-batch Transition Logic ---
+		if session.IsSplitBatch != existing.IsSplitBatch {
+			if session.IsSplitBatch {
+				// Toggle ON: Create Default Batch and Migrate items
+				defaultBatch := &domain.OrderBatch{
+					SessionID: session.ID,
+					Name:      "Đơn 1",
+					IsDefault: true,
+					Status:    "active",
+					SortOrder: 0,
+				}
+				if err := txRepo.OrderBatchRepo().Create(ctx, defaultBatch); err != nil {
+					return fmt.Errorf("failed to create default batch: %w", err)
+				}
+				// Migrate all current items to this batch
+				if err := txRepo.OrderItemRepo().BulkUpdateBatch(ctx, session.ID, nil, &defaultBatch.ID); err != nil {
+					return fmt.Errorf("failed to migrate items to default batch: %w", err)
+				}
+			} else {
+				// Toggle OFF: Only allowed in OPEN status
+				if existing.Status != domain.SessionStatusOpen {
+					return fmt.Errorf("cannot disable multi-batch unless session is OPEN")
+				}
+				// Clear batch IDs from all items
+				if err := txRepo.OrderItemRepo().BulkUpdateBatch(ctx, session.ID, nil, nil); err != nil {
+					return fmt.Errorf("failed to clear item batches: %w", err)
+				}
+				// Delete all batches
+				batches, err := txRepo.OrderBatchRepo().GetBySessionID(ctx, session.ID)
+				if err != nil {
+					return err
+				}
+				for _, b := range batches {
+					if err := txRepo.OrderBatchRepo().Delete(ctx, b.ID); err != nil {
+						return fmt.Errorf("failed to delete batch %s: %w", b.Name, err)
+					}
+				}
+			}
+		}
+
 		err = txRepo.Update(ctx, session)
 		if err == nil {
 			s.hub.Broadcast(session.ID.String(), "session_updated", session)
+			if session.IsSplitBatch != existing.IsSplitBatch {
+				// Broadcast specifically for batch mode change if needed
+				s.hub.Broadcast(session.ID.String(), "batch_mode_changed", map[string]any{
+					"isSplitBatch": session.IsSplitBatch,
+				})
+			}
 		}
 		return err
 	})

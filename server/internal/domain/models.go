@@ -39,6 +39,35 @@ type Session struct {
 	CreatedAt              time.Time `json:"createdAt" db:"created_at"`
 }
 
+type BillResult struct {
+	SessionID       uuid.UUID         `json:"sessionId"`
+	ActualTotal     int64             `json:"actualTotal"`
+	CalculatedTotal int64             `json:"calculatedTotal"`
+	GlobalResidual  int64             `json:"globalResidual"`
+	Participants    []ParticipantBill `json:"participants"`
+}
+
+type ParticipantBill struct {
+	ParticipantID uuid.UUID  `json:"participantId"`
+	Name          string     `json:"name"`
+	IsHost        bool       `json:"isHost"`
+	Subtotal      int64      `json:"subtotal"` // Sum of rounded items
+	Residual      int64      `json:"residual"` // Only for Host
+	FinalAmount   int64      `json:"finalAmount"`
+	Items         []BillItem `json:"items"`
+}
+
+type BillItem struct {
+	ItemID        uuid.UUID `json:"itemId"`
+	ItemName      string    `json:"itemName"`
+	Price         int64     `json:"price"`         // Original price
+	Quantity      int       `json:"quantity"`      // Original quantity
+	RawPrice      float64   `json:"rawPrice"`      // After allocation, before rounding
+	RoundedPrice  int64     `json:"roundedPrice"`  // After rounding 1k
+	IsPaySeparate bool      `json:"isPaySeparate"`
+	BatchName     string    `json:"batchName"`
+}
+
 type Participant struct {
 	ID         uuid.UUID `json:"id" db:"id"`
 	SessionID  uuid.UUID `json:"sessionId" db:"session_id"`
@@ -57,10 +86,12 @@ type OrderBatch struct {
 	BankAccount *string   `json:"bankAccount" db:"bank_account"`
 	QrPayload   *string   `json:"qrPayload" db:"qr_payload"`
 	Status      string    `json:"status" db:"status"`
-	IsDefault   bool      `json:"isDefault" db:"is_default"`
-	SortOrder   int       `json:"sortOrder" db:"sort_order"`
-	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
-}
+	IsDefault      bool      `json:"isDefault" db:"is_default"`
+	SortOrder      int       `json:"sortOrder" db:"sort_order"`
+	DiscountAmount int64     `json:"discountAmount" db:"discount_amount"`
+	ShippingFee    int64     `json:"shippingFee" db:"shipping_fee"`
+	CreatedAt      time.Time `json:"createdAt" db:"created_at"`
+	}
 
 type OrderItem struct {
 	ID            uuid.UUID  `json:"id" db:"id"`

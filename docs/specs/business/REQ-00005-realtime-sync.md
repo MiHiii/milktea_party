@@ -1,11 +1,11 @@
-# 📋 SPEC: Real-time Sync & Data Integrity
-> **Registry IDs:** REQ-005, REQ-012, REQ-017, REQ-018
+﻿# 📋 SPEC: Real-time Sync & Data Integrity
+> **Registry IDs:** REQ-00005, REQ-00012, REQ-00017, REQ-00018
 > **Owner:** /ba | **Version:** 1.0 | **Date:** 2026-03-25
 > **Depends on:** `milktea-logic.md` §3 (Reliability)
 
 ---
 
-## 1. REQ-005: Real-time Sync (WebSocket)
+## 1. REQ-00005: Real-time Sync (WebSocket)
 
 ### 1.1 Mô tả
 Mọi thay đổi trong Session (thêm/sửa/xóa món, chuyển trạng thái) đều phải đồng bộ tức thời tới tất cả Participant trong phòng qua WebSocket.
@@ -35,7 +35,7 @@ Mọi thay đổi trong Session (thêm/sửa/xóa món, chuyển trạng thái) 
 **Cần bổ sung:**
 - Broadcast cho tất cả OrderItem CRUD ops
 - Broadcast cho Participant join
-- Broadcast `session_cancelled` event (REQ-014)
+- Broadcast `session_cancelled` event (REQ-00014)
 - Broadcast `bill_calculated` khi chuyển sang SETTLING
 
 **Frontend:**
@@ -58,7 +58,7 @@ ws.onmessage = (event) => {
 
 ---
 
-## 2. REQ-012: Transactional Financial Ops
+## 2. REQ-00012: Transactional Financial Ops
 
 ### 2.1 Quy tắc
 Theo `milktea-logic.md` §Coding Guardrails: "Mọi thay đổi liên quan đến tiền bạc/trạng thái bắt buộc nằm trong Transaction."
@@ -68,7 +68,7 @@ Theo `milktea-logic.md` §Coding Guardrails: "Mọi thay đổi liên quan đế
 | Operation | Lý do |
 |:---|:---|
 | Chốt đơn (OPEN → LOCKED) | Phải atomic: check status + update + block items |
-| Tính bill (API-011) | Read items + calculate + save result — phải consistent |
+| Tính bill (API-00011) | Read items + calculate + save result — phải consistent |
 | Đánh dấu isPaid | Phải atomic để tránh 2 người đánh dấu trùng thời điểm |
 
 ### 2.3 Code guide cho /dev
@@ -95,7 +95,7 @@ func (s *sessionService) LockSession(ctx context.Context, id uuid.UUID) error {
 
 ---
 
-## 3. REQ-017: Concurrent Update Prevention (Pessimistic Lock)
+## 3. REQ-00017: Concurrent Update Prevention (Pessimistic Lock)
 
 ### 3.1 Vấn đề
 Khi Host bấm "Chốt đơn", Guest có thể đang gửi request thêm/sửa món cùng lúc → Race condition.
@@ -124,7 +124,7 @@ func (r *sessionRepo) LockForUpdate(ctx context.Context, tx *sql.Tx, id uuid.UUI
 
 ---
 
-## 4. REQ-018: Context Timeout (3-5s)
+## 4. REQ-00018: Context Timeout (3-5s)
 
 ### 4.1 Quy tắc
 Theo `milktea-logic.md` §Coding Guardrails: áp dụng `context.WithTimeout(3-5s)` cho mọi DB operation.
@@ -150,3 +150,5 @@ func (s *orderItemService) Create(ctx context.Context, item *domain.OrderItem, k
 
 ---
 *Spec này là nguồn chân lý cho /dev. Mọi thắc mắc liên hệ /ba.*
+
+

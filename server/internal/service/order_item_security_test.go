@@ -38,12 +38,18 @@ func (m *MockOrderItemRepo) GetByParticipantID(ctx context.Context, participantI
 	return args.Get(0).([]domain.OrderItem), args.Error(1)
 }
 
-func (m *MockOrderItemRepo) Update(ctx context.Context, i *domain.OrderItem) error {
-	args := m.Called(ctx, i)
+func (m *MockOrderItemRepo) Update(ctx context.Context, item *domain.OrderItem) error {
+	args := m.Called(ctx, item)
+	return args.Error(0)
+}
+
+func (m *MockOrderItemRepo) BulkUpdateBatch(ctx context.Context, sessionID uuid.UUID, oldBatchID *uuid.UUID, newBatchID *uuid.UUID) error {
+	args := m.Called(ctx, sessionID, oldBatchID, newBatchID)
 	return args.Error(0)
 }
 
 func (m *MockOrderItemRepo) Delete(ctx context.Context, id uuid.UUID) error {
+
 	args := m.Called(ctx, id)
 	return args.Error(0)
 }
@@ -54,6 +60,21 @@ func (m *MockParticipantRepo) GetByID(ctx context.Context, id uuid.UUID) (*domai
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*domain.Participant), args.Error(1)
+}
+
+func (m *MockParticipantRepo) GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]domain.Participant, error) {
+	args := m.Called(ctx, sessionID)
+	return args.Get(0).([]domain.Participant), args.Error(1)
+}
+
+func (m *MockParticipantRepo) Update(ctx context.Context, p *domain.Participant) error {
+	args := m.Called(ctx, p)
+	return args.Error(0)
+}
+
+func (m *MockParticipantRepo) Delete(ctx context.Context, id uuid.UUID) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
 }
 
 func (m *MockParticipantRepo) UpdateLastActive(ctx context.Context, id uuid.UUID) (*domain.Participant, error) {

@@ -40,3 +40,7 @@ type OrderItemService interface {
 	Update(ctx context.Context, item *domain.OrderItem, deviceID uuid.UUID, idempotencyKey string) error
 	Delete(ctx context.Context, id uuid.UUID, deviceID uuid.UUID, idempotencyKey string) error
 }
+
+type BillingService interface {
+	Calculate(ctx context.Context, sessionID uuid.UUID) (*domain.BillResult, error)
+}

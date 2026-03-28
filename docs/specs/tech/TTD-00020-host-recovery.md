@@ -1,7 +1,7 @@
-# 🏗️ TTD-00020: Host Recovery & Re-binding
+﻿# 🏗️ TTD-00020: Host Recovery & Re-binding
 
 **Status:** `DRAFT` | **Owner:** /architect | **Date:** 2026-03-27
-**Reference:** [REQ-00001 §7](docs/specs/business/REQ-00001-session-lifecycle.md#7-req-020-host-recovery--re-binding-admin-secret)
+**Reference:** [REQ-00001 �7](docs/specs/business/REQ-00001-session-lifecycle.md#7-req-00020-host-recovery--re-binding-admin-secret)
 
 ---
 
@@ -70,3 +70,5 @@ ADD COLUMN admin_secret_hash VARCHAR(255) NOT NULL DEFAULT '';
 
 ---
 *TTD này là cơ sở để /pm lập kế hoạch thực hiện.*
+
+

@@ -18,6 +18,8 @@ export interface OrderBatch {
   status: 'open' | 'locked' | 'ordered' | 'settling' | 'completed' | 'cancelled' | 'paid'
   isDefault: boolean
   sortOrder: number
+  discountAmount: number
+  shippingFee: number
   createdAt: string
 }
 
