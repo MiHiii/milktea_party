@@ -106,6 +106,44 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const nameInputRef = useRef('')
 
+  // Moved up to ensure scope availability
+  const onTogglePassword = useCallback(async (enabled: boolean) => {
+    if (!enabled) {
+      setConfirmConfig({
+        isOpen: true,
+        title: 'Gỡ mật khẩu?',
+        description: 'Bất kỳ ai có link đều có thể vào xem và đặt món. Bạn có chắc chắn không?',
+        variant: 'destructive',
+        onConfirm: async () => {
+          setIsLoading(true)
+          try {
+            await api.sessions.update(session.id, { password: null } as any)
+            setSession(prev => ({ ...prev, hasPassword: false }))
+            setShowPasswordEdit(false)
+            setConfirmConfig(prev => ({ ...prev, isOpen: false }))
+          } finally {
+            setIsLoading(false)
+          }
+        }
+      })
+    } else {
+      setShowPasswordEdit(true)
+    }
+  }, [session.id])
+
+  const onSavePassword = useCallback(async () => {
+    if (!hostPasswordDraft) return
+    setIsLoading(true)
+    try {
+      await api.sessions.update(session.id, { password: hostPasswordDraft } as any)
+      setSession(prev => ({ ...prev, hasPassword: true }))
+      setShowPasswordEdit(false)
+      setHostPasswordDraft('')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [session.id, hostPasswordDraft])
+
   const showWarning = (title: string, description: ReactNode) => {
     setConfirmConfig({ isOpen: true, title, description, variant: 'primary', onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false })) })
   }
@@ -148,20 +186,22 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   }, [initialSession, initialParticipants])
 
   const claimHost = useCallback(async () => {
+    const myName = participants.find(p => p.id === myParticipantId)?.name
+    if (!myName) return
+
     setIsLoading(true)
     setRecoveryError('')
     try {
-      await api.sessions.claimHost(session.slug, recoverySecret, recoveryHostName)
+      await api.sessions.claimHost(session.slug, recoverySecret, myName)
       setRecoveryModalOpen(false)
       setRecoverySecret('')
-      setRecoveryHostName('')
       // WS will broadcast host_changed, which we handle
     } catch (e: any) {
-      setRecoveryError(e.message || 'Sai mã quản trị, sai tên Host hoặc Host cũ vẫn đang online')
+      setRecoveryError(e.message || 'Sai mã quản trị hoặc Host cũ vẫn đang online')
     } finally {
       setIsLoading(false)
     }
-  }, [session.slug, recoverySecret, recoveryHostName])
+  }, [session.slug, recoverySecret, myParticipantId, participants])
 
   const lastFetchTime = useRef<number>(0)
 
@@ -789,7 +829,7 @@ export default function SessionClient({ initialSession, initialParticipants, ini
         bankNameInput={bankNameInput} setBankNameInput={setBankNameInput} bankAccountInput={bankAccountInput} setBankAccountInput={setBankAccountInput} 
         showPasswordEdit={showPasswordEdit} hostPasswordDraft={hostPasswordDraft} setHostPasswordDraft={setHostPasswordDraft} 
         onSaveBatchTotal={onSaveBatchTotal} onAddBatch={onAddBatch} onDeleteBatch={onDeleteBatch} onUpdateBatchName={onUpdateBatchName} onUpdateBatchBank={onUpdateBatchBank} 
-        onToggleSplitBatch={onToggleSplitBatch} onTogglePassword={() => {}} onSavePassword={() => {}} onSaveGlobalBank={onSaveGlobalBank} 
+        onToggleSplitBatch={onToggleSplitBatch} onTogglePassword={onTogglePassword} onSavePassword={onSavePassword} onSaveGlobalBank={onSaveGlobalBank} 
         onTriggerActionSheet={(bId) => { setSelectedBatchId(bId || null); setShowActionSheet(true) }} BANK_OPTIONS={BANK_OPTIONS} 
       />
 
@@ -812,15 +852,9 @@ export default function SessionClient({ initialSession, initialParticipants, ini
         <DialogContent className="rounded-[2.5rem] bg-slate-900 border-white/10">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Crown className="w-5 h-5 text-amber-400" /> Khôi phục quyền Host</DialogTitle>
-            <DialogDescription>Nhập đúng Tên Host và mã quản trị để lấy lại quyền quản lý phòng này.</DialogDescription>
+            <DialogDescription>Nhập mã quản trị để lấy lại quyền quản lý phòng này.</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3">
-            <Input 
-              placeholder="Tên Host gốc (VD: Minh)" 
-              value={recoveryHostName} 
-              onChange={e => { setRecoveryHostName(e.target.value); setRecoveryError('') }} 
-              className="rounded-2xl h-12"
-            />
             <Input 
               placeholder="Mã quản trị (6 ký tự)" 
               value={recoverySecret} 
@@ -831,7 +865,7 @@ export default function SessionClient({ initialSession, initialParticipants, ini
             {recoveryError && <p className="text-xs text-rose-400 bg-rose-500/10 p-2 rounded-lg">{recoveryError}</p>}
           </div>
           <DialogFooter>
-            <Button onClick={claimHost} disabled={isLoading || recoverySecret.length < 6 || !recoveryHostName.trim()} className="w-full rounded-2xl h-12 font-bold bg-blue-600 uppercase">Xác nhận khôi phục</Button>
+            <Button onClick={claimHost} disabled={isLoading || recoverySecret.length < 6} className="w-full rounded-2xl h-12 font-bold bg-blue-600 uppercase">Xác nhận khôi phục</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

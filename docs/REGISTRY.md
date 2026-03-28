@@ -47,13 +47,21 @@
 
 ---
 
+## 🐞 7. BUG TRACKER (Phát hiện bởi Test/QC)
+
+| Bug ID | Task | Sprint | Mô tả lỗi | Mức độ | Trạng thái | Ghi chú |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **BUG-00022** | — | S1 | Nút password trong HostSettings không ấn được | Medium | Fixed | Đã map đúng props trong SessionClient |
+
+---
+
 ## 📊 8. SPRINT DASHBOARD
 
 ### Sprint 1 — Summary
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | 19 |
-| **Done** | 18 |
+| **Total Tasks** | 20 |
+| **Done** | 19 |
 | **In Progress** | 1 |
 | **Backlog** | 0 |
 | **Open Bugs** | 0 |

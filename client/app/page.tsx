@@ -51,9 +51,9 @@ export default function HomePage() {
         password: showPassword && data.sessionPassword ? data.sessionPassword : null,
       })
 
-      // Extracted from corrected backend response
-      const sessionData = res.data?.session || (res as any).session
-      const participantData = res.data?.participant || (res as any).participant
+      // Extracted from corrected backend response (unwrapped by fetcher)
+      const sessionData = res.session
+      const participantData = res.participant
 
       console.log('[QC] Creation Response Raw:', res)
       console.log('[QC] Extracted AdminSecret:', sessionData?.adminSecret)
