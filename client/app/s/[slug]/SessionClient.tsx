@@ -29,6 +29,7 @@ import { QrSection } from '@/components/session/QrSection'
 import { BillSummary } from '@/components/session/BillSummary'
 import { ConfirmModal } from '@/components/session/ConfirmModal'
 import { ActionSheet } from '@/components/ui/ActionSheet'
+import { HostSecretToast } from '@/components/session/HostSecretToast'
 
 interface Props {
   initialSession: Session
@@ -95,11 +96,11 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   const [showChangeToast, setShowChangeToast] = useState(false)
   
   // Host Recovery State
-  const [showSecretBanner, setShowSecretBanner] = useState(false)
+  const [showHostSecretToast, setShowHostSecretToast] = useState(false)
   const [recoveryModalOpen, setRecoveryModalOpen] = useState(false)
   const [recoverySecret, setRecoverySecret] = useState('')
+  const [recoveryHostName, setRecoveryHostName] = useState('')
   const [recoveryError, setRecoveryError] = useState('')
-  const [adminSecretPlain, setAdminSecretPlain] = useState<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
@@ -137,8 +138,11 @@ export default function SessionClient({ initialSession, initialParticipants, ini
     if (amHost) {
       const secret = getHostSecret(initialSession.slug)
       if (secret) {
-        setAdminSecretPlain(secret)
-        setShowSecretBanner(true)
+        // Auto-show toast for newly created rooms
+        const isNew = sessionStorage.getItem(`newlyCreated_${initialSession.id}`)
+        if (isNew === 'true') {
+          setShowHostSecretToast(true)
+        }
       }
     }
   }, [initialSession, initialParticipants])
@@ -147,19 +151,26 @@ export default function SessionClient({ initialSession, initialParticipants, ini
     setIsLoading(true)
     setRecoveryError('')
     try {
-      await api.sessions.claimHost(session.slug, recoverySecret)
+      await api.sessions.claimHost(session.slug, recoverySecret, recoveryHostName)
       setRecoveryModalOpen(false)
       setRecoverySecret('')
+      setRecoveryHostName('')
       // WS will broadcast host_changed, which we handle
     } catch (e: any) {
-      setRecoveryError(e.message || 'Sai mã quản trị hoặc Host cũ vẫn đang online')
+      setRecoveryError(e.message || 'Sai mã quản trị, sai tên Host hoặc Host cũ vẫn đang online')
     } finally {
       setIsLoading(false)
     }
-  }, [session.slug, recoverySecret])
+  }, [session.slug, recoverySecret, recoveryHostName])
+
+  const lastFetchTime = useRef<number>(0)
 
   // 2. WebSocket & Realtime Sync
   const fetchLatestData = useCallback(async () => {
+    const now = Date.now()
+    if (now - lastFetchTime.current < 5000) return // Throttle: 5s
+    lastFetchTime.current = now
+
     try {
       const [s, p, i, b] = await Promise.all([
         api.sessions.getBySlug(session.slug),
@@ -171,8 +182,14 @@ export default function SessionClient({ initialSession, initialParticipants, ini
       setParticipants(p || [])
       setOrderItems(i || [])
       setOrderBatches(b || [])
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to re-sync data:', e)
+      // Reset timer on error to allow retry
+      if (e.message?.includes('Rate limit')) {
+        lastFetchTime.current = now + 30000 // Block for 30s if rate limited
+      } else {
+        lastFetchTime.current = 0 
+      }
     }
   }, [session.id, session.slug])
 
@@ -454,19 +471,39 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   }, [session.id, bankNameInput, bankAccountInput])
 
   const onToggleSplitBatch = useCallback(async (isSplit: boolean) => {
-    setIsToggling(true)
-    // Optimistic Update
-    setSession(prev => ({ ...prev, isSplitBatch: isSplit }))
-    
-    try { 
-      await api.sessions.update(session.id, { 
-        isSplitBatch: isSplit
-      }) 
-    } catch (e) {
-      // Rollback on error
-      setSession(prev => ({ ...prev, isSplitBatch: !isSplit }))
-    } finally { 
-      setIsToggling(false) 
+    const performToggle = async () => {
+      setIsToggling(true)
+      // Optimistic Update
+      setSession(prev => ({ ...prev, isSplitBatch: isSplit }))
+      
+      try { 
+        await api.sessions.update(session.id, { 
+          isSplitBatch: isSplit
+        }) 
+        // Important: Fetch latest batches immediately to get "Đơn 1" if newly enabled
+        const updatedBatches = await api.orderBatches.getBySession(session.id)
+        setOrderBatches(updatedBatches || [])
+      } catch (e) {
+        // Rollback on error
+        setSession(prev => ({ ...prev, isSplitBatch: !isSplit }))
+      } finally { 
+        setIsToggling(false) 
+      }
+    }
+
+    if (!isSplit) {
+      setConfirmConfig({
+        isOpen: true,
+        title: 'Tắt chia đơn?',
+        description: 'Hành động này sẽ gộp tất cả món ăn về một đơn duy nhất. Toàn bộ đợt đơn con sẽ bị xoá. Bạn có chắc chắn không?',
+        variant: 'destructive',
+        onConfirm: () => {
+          setConfirmConfig(prev => ({ ...prev, isOpen: false }))
+          performToggle()
+        }
+      })
+    } else {
+      performToggle()
     }
   }, [session.id])
 
@@ -538,12 +575,14 @@ export default function SessionClient({ initialSession, initialParticipants, ini
                 setBankAccountInput(result.bankAccount)
                 onSaveGlobalBank(result.bankName, result.bankAccount)
               }
-              alert('🛍️ Đã nhận diện được số tài khoản!')
+              // Toast or small notification instead of alert
+              setShowChangeToast(true)
+              setTimeout(() => setShowChangeToast(false), 3000)
             } else {
-              alert('Nhận diện được mã nhưng không tìm thấy số tài khoản hợp lệ.')
+              showWarning('Không tìm thấy STK', 'Nhận diện được mã nhưng không tìm thấy số tài khoản hợp lệ.')
             }
           } else {
-            alert('Không nhận diện được mã QR. Bạn hãy thử chụp lại rõ hơn nhé!')
+            showWarning('Lỗi quét mã', 'Không nhận diện được mã QR. Bạn hãy thử chụp lại rõ hơn nhé!')
           }
         }
         img.src = e.target?.result as string
@@ -616,36 +655,16 @@ export default function SessionClient({ initialSession, initialParticipants, ini
       </header>
 
       <div className="max-w-2xl mx-auto px-4 pt-3 flex flex-col gap-3">
-        {/* Admin Secret Banner for Host */}
-        {iAmHost && showSecretBanner && adminSecretPlain && (
-          <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
+        {showChangeToast && (
+          <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 animate-in slide-in-from-top-2">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Crown className="w-5 h-5 text-amber-400" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] text-amber-400 font-black uppercase tracking-wider">Mã quản trị (Admin Secret)</p>
-                <p className="text-lg font-mono font-bold text-white tracking-widest">{adminSecretPlain}</p>
-              </div>
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+              <p className="text-sm font-bold">Quyền Host đã được cập nhật!</p>
             </div>
-            <div className="flex gap-2">
-              <Button size="sm" variant="ghost" className="h-9 px-3 rounded-xl text-amber-400 hover:bg-amber-500/10" onClick={() => { copyToClipboard(adminSecretPlain); setCopied(true); setTimeout(() => setCopied(false), 2000) }}>
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              </Button>
-              <Button size="sm" variant="ghost" className="h-9 w-9 p-0 rounded-xl text-white/40 hover:bg-white/5" onClick={() => setShowSecretBanner(false)}>
-                <XCircle className="w-4 h-4" />
-              </Button>
-            </div>
+            <button onClick={() => setShowChangeToast(false)}><XCircle className="w-4 h-4 text-emerald-500/40" /></button>
           </div>
         )}
 
-        {/* Change Toast */}
-        {showChangeToast && (
-          <div className="bg-emerald-500/90 text-white rounded-2xl px-4 py-3 flex items-center gap-3 shadow-xl animate-in slide-in-from-bottom-4 fixed bottom-6 left-4 right-4 z-50 md:left-auto md:right-6 md:w-80">
-            <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-            <p className="text-sm font-bold">Quyền Host đã được cập nhật!</p>
-          </div>
-        )}
         {session.status === 'cancelled' && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
             <Card className="w-full max-w-sm rounded-[2.5rem] bg-slate-900 border-rose-500/20 p-8 text-center shadow-2xl">
@@ -666,6 +685,17 @@ export default function SessionClient({ initialSession, initialParticipants, ini
             <p className="text-sm text-white/70 mb-1">Bạn cần thanh toán</p> 
             <p className="text-4xl font-black text-white tabular-nums">{formatVND(myBill.total)}</p> 
           </div> 
+        )}
+
+        {/* Host Secret Toast (The 10s Inline Window) */}
+        {showHostSecretToast && getHostSecret(session.slug) && (
+          <HostSecretToast 
+            secretCode={getHostSecret(session.slug)!} 
+            onClose={() => {
+              setShowHostSecretToast(false)
+              sessionStorage.removeItem(`newlyCreated_${session.id}`)
+            }} 
+          />
         )}
         
         {canEdit && ( 
@@ -741,10 +771,13 @@ export default function SessionClient({ initialSession, initialParticipants, ini
           </div> 
         )}
 
-        {/* Recovery Button for Non-Host */}
-        {!iAmHost && session.status !== 'completed' && session.status !== 'cancelled' && (
-          <button onClick={() => setRecoveryModalOpen(true)} className="mt-4 text-[10px] text-white/20 hover:text-sky-400 uppercase font-black text-center w-full flex items-center justify-center gap-1.5">
-            <Crown className="w-3 h-3" /> Bạn là Host? Khôi phục quyền
+        {/* Recovery Button: Only shown if current participant name matches the host's name but device ID doesn't */}
+        {!iAmHost && 
+         session.status !== 'completed' && 
+         session.status !== 'cancelled' && 
+         participants.find(p => p.id === myParticipantId)?.name === participants.find(p => p.isHost)?.name && (
+          <button onClick={() => setRecoveryModalOpen(true)} className="mt-4 text-[10px] text-white/20 hover:text-sky-400 uppercase font-black text-center w-full flex items-center justify-center gap-1.5 transition-colors">
+            <Crown className="w-3 h-3" /> Bạn là {participants.find(p => p.isHost)?.name}? Khôi phục quyền Host
           </button>
         )}
       </div>
@@ -779,11 +812,17 @@ export default function SessionClient({ initialSession, initialParticipants, ini
         <DialogContent className="rounded-[2.5rem] bg-slate-900 border-white/10">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Crown className="w-5 h-5 text-amber-400" /> Khôi phục quyền Host</DialogTitle>
-            <DialogDescription>Nhập mã quản trị 6 ký tự để lấy lại quyền quản lý phòng này.</DialogDescription>
+            <DialogDescription>Nhập đúng Tên Host và mã quản trị để lấy lại quyền quản lý phòng này.</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3">
             <Input 
-              placeholder="Mã quản trị (VD: MT789X)" 
+              placeholder="Tên Host gốc (VD: Minh)" 
+              value={recoveryHostName} 
+              onChange={e => { setRecoveryHostName(e.target.value); setRecoveryError('') }} 
+              className="rounded-2xl h-12"
+            />
+            <Input 
+              placeholder="Mã quản trị (6 ký tự)" 
               value={recoverySecret} 
               onChange={e => { setRecoverySecret(e.target.value.toUpperCase()); setRecoveryError('') }} 
               className="rounded-2xl h-12 font-mono text-center text-lg tracking-widest"
@@ -792,7 +831,7 @@ export default function SessionClient({ initialSession, initialParticipants, ini
             {recoveryError && <p className="text-xs text-rose-400 bg-rose-500/10 p-2 rounded-lg">{recoveryError}</p>}
           </div>
           <DialogFooter>
-            <Button onClick={claimHost} disabled={isLoading || recoverySecret.length < 6} className="w-full rounded-2xl h-12 font-bold bg-blue-600">Xác nhận</Button>
+            <Button onClick={claimHost} disabled={isLoading || recoverySecret.length < 6 || !recoveryHostName.trim()} className="w-full rounded-2xl h-12 font-bold bg-blue-600 uppercase">Xác nhận khôi phục</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

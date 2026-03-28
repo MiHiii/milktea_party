@@ -24,6 +24,10 @@ func (s *orderBatchService) Create(ctx context.Context, batch *domain.OrderBatch
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
+	if batch.Status == "" {
+		batch.Status = "open"
+	}
+
 	err := s.repo.OrderBatchRepo().Create(ctx, batch)
 	if err == nil {
 		s.hub.Broadcast(batch.SessionID.String(), "order_batch_created", batch)

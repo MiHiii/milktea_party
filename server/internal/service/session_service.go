@@ -270,7 +270,7 @@ func (s *sessionService) Update(ctx context.Context, session *domain.Session, re
 					SessionID: session.ID,
 					Name:      "Đơn 1",
 					IsDefault: true,
-					Status:    "active",
+					Status:    "open",
 					SortOrder: 0,
 				}
 				if err := txRepo.OrderBatchRepo().Create(ctx, defaultBatch); err != nil {
@@ -316,16 +316,16 @@ func (s *sessionService) Update(ctx context.Context, session *domain.Session, re
 	})
 }
 
-func (s *sessionService) ClaimHost(ctx context.Context, slug string, adminSecret string, newHostDeviceID uuid.UUID) error {
+func (s *sessionService) ClaimHost(ctx context.Context, slug string, adminSecret string, hostName string, newHostDeviceID uuid.UUID) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	// 0. Rate Limiting Check
+	// ... (giữ nguyên logic rate limit)
 	key := newHostDeviceID.String()
 	s.claimMu.Lock()
 	record, exists := s.claimAttempts[key]
 	if exists {
-		// Reset count if last attempt was more than 1 hour ago
 		if time.Since(record.lastAttempt) > time.Hour {
 			record.count = 0
 		}
@@ -351,7 +351,6 @@ func (s *sessionService) ClaimHost(ctx context.Context, slug string, adminSecret
 
 		// 2. Verify Admin Secret
 		if err := bcrypt.CompareHashAndPassword([]byte(session.AdminSecretHash), []byte(adminSecret)); err != nil {
-			// Increment failure count
 			s.claimMu.Lock()
 			record.count++
 			record.lastAttempt = time.Now()
@@ -359,12 +358,7 @@ func (s *sessionService) ClaimHost(ctx context.Context, slug string, adminSecret
 			return fmt.Errorf("invalid admin secret")
 		}
 
-		// Reset count on success
-		s.claimMu.Lock()
-		delete(s.claimAttempts, key)
-		s.claimMu.Unlock()
-
-		// 3. Check Heartbeat of current host
+		// 3. Verify Host Name (Case-insensitive)
 		participants, err := txRepo.ParticipantRepo().GetBySessionID(ctx, session.ID)
 		if err != nil {
 			return err
@@ -382,11 +376,26 @@ func (s *sessionService) ClaimHost(ctx context.Context, slug string, adminSecret
 			}
 		}
 
-		if currentHost != nil {
-			// If host has been active in the last 2 minutes, don't allow claim
-			if time.Since(currentHost.LastActive) < 2*time.Minute {
-				return fmt.Errorf("current host is still active (active %v ago)", time.Since(currentHost.LastActive).Round(time.Second))
-			}
+		if currentHost == nil {
+			return fmt.Errorf("original host not found")
+		}
+
+		if strings.ToLower(currentHost.Name) != strings.ToLower(strings.TrimSpace(hostName)) {
+			s.claimMu.Lock()
+			record.count++
+			record.lastAttempt = time.Now()
+			s.claimMu.Unlock()
+			return fmt.Errorf("host name does not match")
+		}
+
+		// Reset count on success
+		s.claimMu.Lock()
+		delete(s.claimAttempts, key)
+		s.claimMu.Unlock()
+
+		// 4. Check Heartbeat
+		if time.Since(currentHost.LastActive) < 2*time.Minute {
+			return fmt.Errorf("current host is still active (active %v ago)", time.Since(currentHost.LastActive).Round(time.Second))
 		}
 
 		if newHost == nil {

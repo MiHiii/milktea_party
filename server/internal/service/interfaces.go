@@ -17,7 +17,7 @@ type SessionService interface {
 	ListByIDs(ctx context.Context, ids []uuid.UUID) ([]domain.Session, error)
 	VerifyPassword(ctx context.Context, slug string, password string) (bool, error)
 	CleanupOldSessions(ctx context.Context, days int) (int64, error)
-	ClaimHost(ctx context.Context, slug string, adminSecret string, newHostDeviceID uuid.UUID) error
+	ClaimHost(ctx context.Context, slug string, adminSecret string, hostName string, newHostDeviceID uuid.UUID) error
 }
 
 type ParticipantService interface {

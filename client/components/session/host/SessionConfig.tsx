@@ -62,6 +62,11 @@ export function SessionConfig({
           </div>
         )}
       </div>
+      {adminSecret && (
+        <p className="text-[10px] text-white/20 mt-[-12px] px-1 italic">
+          * Dùng mã này để khôi phục quyền Host nếu bạn đổi trình duyệt hoặc mất dữ liệu thiết bị.
+        </p>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Card className={`p-4 rounded-3xl flex items-center justify-between border-white/10 transition-all ${hasSubOrders ? 'bg-emerald-500/5 ring-1 ring-emerald-500/20' : 'bg-white/5'}`}>
           <div className="flex items-center gap-3">
@@ -78,14 +83,7 @@ export function SessionConfig({
               type="checkbox" 
               className="sr-only peer" 
               checked={hasSubOrders} 
-              onChange={(e) => {
-                const isTurningOff = !e.target.checked;
-                if (isTurningOff) {
-                  const ok = window.confirm("Hành động này sẽ gộp tất cả món ăn về một đơn duy nhất (Đơn 1). Thông tin ngân hàng của Đơn 1 sẽ được lưu làm thông tin mặc định cho Host. Bạn có chắc chắn không?");
-                  if (!ok) return;
-                }
-                onToggleSplitBatch(e.target.checked);
-              }} 
+              onChange={(e) => onToggleSplitBatch(e.target.checked)} 
               disabled={isToggling} 
             />
             <div className="w-11 h-6 bg-white/10 rounded-full peer peer-checked:bg-emerald-500 transition-colors relative">

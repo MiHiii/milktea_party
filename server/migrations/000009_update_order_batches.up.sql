@@ -1,3 +1,5 @@
+SET search_path TO milktea;
+
 ALTER TABLE order_batches 
 ADD COLUMN discount_amount BIGINT NOT NULL DEFAULT 0,
 ADD COLUMN shipping_fee BIGINT NOT NULL DEFAULT 0;

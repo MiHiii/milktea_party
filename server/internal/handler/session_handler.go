@@ -316,14 +316,16 @@ func (h *SessionHandler) VerifyPassword(c *gin.Context) {
 		"data": gin.H{"success": true},
 	})
 }
-
 func (h *SessionHandler) ClaimHost(c *gin.Context) {
 	slug := c.Param("slug")
 	var req struct {
 		AdminSecret string `json:"adminSecret"`
+		HostName    string `json:"hostName"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
+// ...
+
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": gin.H{
 				"code":    "VALIDATION_FAILED",
@@ -336,7 +338,7 @@ func (h *SessionHandler) ClaimHost(c *gin.Context) {
 	// Use device ID from middleware as the new host
 	deviceID := middleware.GetDeviceID(c)
 
-	if err := h.svc.ClaimHost(c.Request.Context(), slug, req.AdminSecret, deviceID); err != nil {
+	if err := h.svc.ClaimHost(c.Request.Context(), slug, req.AdminSecret, req.HostName, deviceID); err != nil {
 		status := http.StatusUnprocessableEntity
 		code := "PROCESS_FAILED"
 		

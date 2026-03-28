@@ -51,12 +51,28 @@ export default function HomePage() {
         password: showPassword && data.sessionPassword ? data.sessionPassword : null,
       })
 
-      // Go backend returns { session: domain.Session, participant: domain.Participant }
-      if (res.participant?.id) {
-        setParticipantId(res.session.id, res.participant.id)
+      // Extracted from corrected backend response
+      const sessionData = res.data?.session || (res as any).session
+      const participantData = res.data?.participant || (res as any).participant
+
+      console.log('[QC] Creation Response Raw:', res)
+      console.log('[QC] Extracted AdminSecret:', sessionData?.adminSecret)
+
+      if (participantData?.id) {
+        setParticipantId(sessionData.id, participantData.id)
       }
 
-      router.push(`/s/${res.session.slug}`)
+      // Save Host Secret for recovery
+      if (sessionData?.adminSecret && sessionData?.slug) {
+        console.log('[QC] SUCCESS: Saving Secret for slug:', sessionData.slug)
+        saveHostSecret(sessionData.slug, sessionData.adminSecret)
+        // Mark as newly created to show toast in dashboard
+        sessionStorage.setItem(`newlyCreated_${sessionData.id}`, 'true')
+      } else {
+        console.warn('[QC] FAILURE: Missing secret or slug in creation response')
+      }
+
+      router.push(`/s/${sessionData.slug}`)
     } catch (e: any) {
       console.error(e)
       setCreateError(e.message || 'Có lỗi xảy ra khi tạo đơn. Vui lòng thử lại!')

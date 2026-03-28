@@ -42,6 +42,7 @@ export interface Session {
   useDefaultQrForAll: boolean
   hasPassword?: boolean
   password?: string | null // For session creation/verification
+  adminSecret?: string     // Plaintext secret returned only once on create
   createdAt: string
 }
 

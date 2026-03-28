@@ -50,18 +50,21 @@ export function ParticipantItem({
   isLoading,
   PERCENT_OPTIONS
 }: ParticipantItemProps) {
+  const [mounted, setMounted] = React.useState(false)
   const [now, setNow] = React.useState(Date.now())
 
   React.useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 15000) // Update every 15s to keep "online" status fresh
+    setMounted(true)
+    setNow(Date.now())
+    const timer = setInterval(() => setNow(Date.now()), 15000)
     return () => clearInterval(timer)
   }, [])
 
   const lastActive = new Date(participant.lastActive).getTime()
-  const isOnline = (now - lastActive) < 60000
+  const isOnline = mounted && (now - lastActive) < 60000
   const diffMinutes = Math.floor((now - lastActive) / 60000)
   
-  const offlineText = diffMinutes > 0 ? `offline ${diffMinutes}p` : 'vừa rời đi'
+  const statusText = !mounted ? '...' : isOnline ? 'Online' : (diffMinutes > 0 ? `offline ${diffMinutes}p` : 'vừa rời đi')
 
   return (
     <div className="group">
@@ -82,11 +85,9 @@ export function ParticipantItem({
             {participant.id === myParticipantId && <span className="text-xs text-sky-400">(bạn)</span>}
           </div>
           <p className="text-xs text-white/40">
-            {isOnline ? (
-              <span className="text-emerald-400/60 font-medium">Online · {items.length} món</span>
-            ) : (
-              <span>{offlineText} · {items.length} món</span>
-            )}
+            <span className={isOnline ? "text-emerald-400/60 font-medium" : ""}>
+              {statusText} · {items.length} món
+            </span>
             <span> · {formatVND(calcSubtotal(items))}</span>
           </p>
         </div>
