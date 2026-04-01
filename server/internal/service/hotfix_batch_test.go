@@ -13,21 +13,24 @@ import (
 
 func TestHotfix_BatchStatus_Constraint(t *testing.T) {
 	mockSessionRepo := new(MockSessionRepo)
-	mockOrderBatchRepo := new(MockOrderBatchRepo)
-	mockSessionRepo.On("OrderBatchRepo").Return(mockOrderBatchRepo)
-
 	wsHub := websocket.NewHub()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go wsHub.Run(ctx)
+
 	svc := NewOrderBatchService(mockSessionRepo, wsHub)
 
 	t.Run("Verify new batch gets 'open' status by default", func(t *testing.T) {
+		sessionID := uuid.New()
 		batch := &domain.OrderBatch{
-			SessionID: uuid.New(),
-			Name:      "Đơn ShopeeFood",
-			// Status is empty
+			SessionID: sessionID,
+			Name:      "New Batch",
 		}
 
-		// Expectation: Service should set status to "open" before calling repo
-		mockOrderBatchRepo.On("Create", mock.Anything, mock.MatchedBy(func(b *domain.OrderBatch) bool {
+		mockSessionRepo.On("OrderBatchRepo").Return(new(MockOrderBatchRepo))
+		
+		batchRepo := mockSessionRepo.OrderBatchRepo().(*MockOrderBatchRepo)
+		batchRepo.On("Create", mock.Anything, mock.MatchedBy(func(b *domain.OrderBatch) bool {
 			return b.Status == "open"
 		})).Return(nil).Once()
 

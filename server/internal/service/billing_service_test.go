@@ -17,27 +17,16 @@ func TestBillingService_Calculate(t *testing.T) {
 	mockOrderItemRepo := new(MockOrderItemRepo)
 	mockOrderBatchRepo := new(MockOrderBatchRepo)
 
-	// Setup relations
-	mockSessionRepo.On("ParticipantRepo").Return(mockParticipantRepo)
-	mockSessionRepo.On("OrderItemRepo").Return(mockOrderItemRepo)
-	mockSessionRepo.On("OrderBatchRepo").Return(mockOrderBatchRepo)
-
-	svc := NewBillingService(mockSessionRepo)
+	svc := NewBillingService(mockSessionRepo, mockParticipantRepo, mockOrderItemRepo, mockOrderBatchRepo)
 
 	sessionID := uuid.New()
 	hostID := uuid.New()
 	guestID := uuid.New()
 
 	t.Run("TC-03: Odd Shipping Fee & Residual Check", func(t *testing.T) {
-		// Scenario: Host (30k), Guest (30k), Ship (5k)
-		// Actual total = 65k
-		// Each raw = 32.5k -> Rounded = 33k
-		// Sum rounded = 66k -> Residual = -1k
-		// Host final should be 33k - 1k = 32k
-		
 		session := &domain.Session{
 			ID:           sessionID,
-			HostDeviceID: uuid.New(), // Simplified for test
+			HostDeviceID: uuid.New(),
 			IsSplitBatch: false,
 			ShippingFee:  5000,
 			DiscountValue: 0,
@@ -74,14 +63,9 @@ func TestBillingService_Calculate(t *testing.T) {
 	})
 
 	t.Run("TC-04: Pay Separate Exclusion", func(t *testing.T) {
-		// Scenario: Guest 1 (30k, separate), Guest 2 (30k, shared), Ship (10k)
-		// Guest 1 pays 30k (No ship)
-		// Guest 2 pays 30k + 10k = 40k
-		// Total actual = 70k
-		
 		session := &domain.Session{
 			ID:           sessionID,
-			HostDeviceID: hostID, // We use hostID defined outside
+			HostDeviceID: hostID,
 			IsSplitBatch: false,
 			ShippingFee:  10000,
 		}
@@ -115,25 +99,3 @@ func TestBillingService_Calculate(t *testing.T) {
 		assert.Equal(t, int64(40000), sharedTotal, "Shared item should take all ship fee")
 	})
 }
-
-// Add MockOrderBatchRepo if not exists in other files
-type MockOrderBatchRepo struct {
-	mock.Mock
-}
-func (m *MockOrderBatchRepo) Create(ctx context.Context, b *domain.OrderBatch) error { return m.Called(ctx, b).Error(0) }
-func (m *MockOrderBatchRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.OrderBatch, error) { 
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil { return nil, args.Error(1) }
-	return args.Get(0).(*domain.OrderBatch), args.Error(1)
-}
-func (m *MockOrderBatchRepo) GetBySessionID(ctx context.Context, sid uuid.UUID) ([]domain.OrderBatch, error) {
-	args := m.Called(ctx, sid)
-	return args.Get(0).([]domain.OrderBatch), args.Error(1)
-}
-func (m *MockOrderBatchRepo) GetDefaultBatch(ctx context.Context, sid uuid.UUID) (*domain.OrderBatch, error) {
-	args := m.Called(ctx, sid)
-	if args.Get(0) == nil { return nil, args.Error(1) }
-	return args.Get(0).(*domain.OrderBatch), args.Error(1)
-}
-func (m *MockOrderBatchRepo) Update(ctx context.Context, b *domain.OrderBatch) error { return m.Called(ctx, b).Error(0) }
-func (m *MockOrderBatchRepo) Delete(ctx context.Context, id uuid.UUID) error { return m.Called(ctx, id).Error(0) }

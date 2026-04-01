@@ -45,9 +45,12 @@ func RateLimiter() gin.HandlerFunc {
 			limiter.count++
 		}
 
-		if limiter.count > 10 {
+		if limiter.count > 30 {
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-				"error": "Rate limit exceeded. Please try again later.",
+				"error": gin.H{
+					"code": "RATE_LIMIT_EXCEEDED",
+					"message": "Bạn đang thao tác quá nhanh. Vui lòng đợi vài giây để hệ thống xử lý nhé!",
+				},
 			})
 			return
 		}

@@ -46,19 +46,20 @@ func main() {
 
 	// 4. Initialize WebSocket Hub
 	wsHub := websocket.NewHub()
-	go wsHub.Run(context.Background()) // Should ideally use a cancellable context for graceful shutdown
+	go wsHub.Run(context.Background())
 
 	// 5. Initialize Repositories
 	sessionRepo := repository.NewSessionRepository(dbPool)
 	participantRepo := repository.NewParticipantRepository(dbPool)
 	orderItemRepo := repository.NewOrderItemRepository(dbPool)
+	orderBatchRepo := repository.NewOrderBatchRepository(dbPool)
 
 	// 6. Initialize Services
 	sessionSvc := service.NewSessionService(sessionRepo, participantRepo, wsHub)
-	participantSvc := service.NewParticipantService(participantRepo, wsHub)
+	participantSvc := service.NewParticipantService(participantRepo, sessionRepo, wsHub)
 	orderItemSvc := service.NewOrderItemService(orderItemRepo, sessionRepo, participantRepo, wsHub)
 	orderBatchSvc := service.NewOrderBatchService(sessionRepo, wsHub)
-	billingSvc := service.NewBillingService(sessionRepo)
+	billingSvc := service.NewBillingService(sessionRepo, participantRepo, orderItemRepo, orderBatchRepo)
 
 	// 7. Initialize Handlers
 	sessionHdl := handler.NewSessionHandler(sessionSvc)

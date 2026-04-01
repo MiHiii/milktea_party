@@ -1,75 +1,44 @@
-# 🏗️ TTD-00020: Host Recovery & Re-binding
+# 🏗️ TTD-00020: Host Recovery & Activity Tracking - v3.0
 
-**Status:** `APPROVED` | **Owner:** /architect | **Date:** 2026-03-27
-**Reference:** [REQ-00001 §7](docs/specs/business/REQ-00001-session-lifecycle.md#7-req-00020-host-recovery--re-binding-admin-secret)
+**Status:** `APPROVED` | **Owner:** /architect | **Date:** 2026-03-28
+**Reference:** [REQ-00020 v8.0 (BA)](specs/business/REQ-00001-session-lifecycle.md)
 
 ---
 
 ## 1. Data Model & Migration
-Bổ sung cột lưu trữ hash của mã quản trị.
+Bổ sung cột theo dõi nhịp tim riêng của thiết bị đang giữ quyền Host.
 
-### Migration (`server/migrations/000008_add_admin_secret.up.sql`)
+### Migration (`server/migrations/000010_add_host_activity.up.sql`)
 ```sql
 ALTER TABLE milktea.sessions 
-ADD COLUMN admin_secret_hash VARCHAR(255) NOT NULL DEFAULT '';
+ADD COLUMN host_last_active TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ```
 
-## 2. API Design
+## 2. Logic cập nhật (Backend)
 
-### 2.1. Cập nhật `POST /api/sessions` (Create Session)
-- **Generator:** Bộ ký tự `23456789ABCDEFGHJKLMNPQRSTUVWXYZ`.
-- **Logic:** 
-  1. Sinh ngẫu nhiên 6 ký tự.
-  2. Hash bằng `bcrypt.GenerateFromPassword`.
-- **Response Shape:**
-```json
-{
-  "data": {
-    "session": { ... },
-    "participant": { ... },
-    "adminSecret": "K7R9WP"
-  }
-}
-```
+### 2.1. Tách biệt Heartbeat (ParticipantService)
+Khi nhận Heartbeat từ thiết bị `D` cho Participant `P`:
+1.  **Cập nhật nhịp tim thành viên:** `participants.last_active = NOW()` (Để hiển thị Online trên UI).
+2.  **Kiểm tra vai trò Host:** Lấy `session` liên quan đến `P`.
+3.  **Cập nhật nhịp tim Host:** Nếu `D == session.host_device_id`:
+    *   Thực hiện cập nhật `sessions.host_last_active = NOW()`.
 
-### 2.2. Endpoint mới: `POST /api/sessions/slug/:slug/claim-host`
-- **Headers:** `X-Device-ID` (ID thiết bị mới).
-- **Body:** `{ "adminSecret": "K7R9WP" }`.
-- **Logic:** `bcrypt.CompareHashAndPassword`. 
-- **Grace Period:** Nếu host cũ active < 120s -> `403 Forbidden`.
+### 2.2. Logic ClaimHost (Hard-Gate Recovery)
+Khi một thiết bị mới muốn chiếm quyền quản trị:
+1.  **Xác thực:** Kiểm tra Secret Code và Identity (như thiết kế v2.0).
+2.  **Kiểm tra thời gian chờ:**
+    *   Tính toán: `diff = time.Since(session.host_last_active)`.
+    *   Nếu `diff < 2 minutes`:
+        *   Trả về lỗi `403 Forbidden`.
+        *   Message: *"Thiết bị khác của bạn vẫn đang mở phòng này. Vui lòng đợi {seconds} giây nữa..."* (Hardcoded tại Service).
+        *   Payload kèm theo: `{"remaining_seconds": 120 - int(diff.Seconds())}`.
+    *   Nếu `diff >= 2 minutes`: Cấp quyền Host cho thiết bị mới.
 
-## 3. UI/UX: The "10s Golden Window" Toast
+## 3. UI/UX: Live Countdown trong Modal
 
-Thành phần thông báo đặc biệt chỉ xuất hiện 1 lần duy nhất sau khi tạo phòng thành công.
-
-### 3.1. Đặc tính kỹ thuật (HostSecretToast.tsx)
-- **Vị trí:** `fixed top-4 right-4` (Desktop), `fixed bottom-4 left-4 right-4` (Mobile).
-- **Thời gian:** 10 giây (auto-close).
-- **Hiệu ứng viền (Border Countdown):**
-    - Sử dụng `SVG stroke-dashoffset` animation.
-    - Path chạy bao quanh khung Toast từ 100% về 0% trong 10s.
-    - Màu sắc: Sky-400 (Phù hợp theme chung).
-
-### 3.2. Logic Bảo mật (Secure Reveal)
-- **Trạng thái mặc định:** Mã chủ phòng hiển thị dạng `••••••` (masking).
-- **Hành động Click:**
-    - Khi click vào vùng mã: Chuyển sang plaintext.
-    - Trigger `navigator.clipboard.writeText`.
-  * BA Note: Hãy đảm bảo khi click vào, mã không chỉ hiện ra mà còn phải có một phản hồi thị giác nhẹ (ví dụ: đổi icon thành dấu Check ✅ trong 1s) để người dùng biết là mã đã được copy thành công, tránh việc họ phải click nhiều lần.
-- **Logic Blur (Focus-out):**
-    - Sử dụng `onMouseLeave` hoặc `onBlur`.
-    - Ngay khi chuột rời khỏi hoặc mất focus, lập tức quay về dạng `••••••`.
-    - Đảm bảo an toàn tuyệt đối khi chụp màn hình (Screenshot-proof).
-
-### 3.3. Nội dung & Cá nhân hóa
-- **Lời chào:** `Chào ${hostName}! 👋`
-- **Thông điệp:** `Bạn là chủ phòng này. Mã chủ phòng: [••••••]`
-- **Chú thích:** `Dùng mã này để đăng nhập lại từ thiết bị khác.`
-
-## 4. Frontend Implementation
-- **Component:** `client/components/session/HostSecretToast.tsx`.
-- **Library:** `framer-motion` cho transition và SVG animation.
-- **Integration:** Gắn vào `SessionClient.tsx`, kích hoạt dựa trên state nhận được từ trang tạo phòng.
+- **Trigger:** Khi nhận lỗi 403 từ API `claim-host`, bóc tách `remaining_seconds`.
+- **Hiệu ứng:** Hiển thị một thông báo màu vàng trong Modal khôi phục.
+- **Timer:** Sử dụng một `useEffect` timer tại Frontend để tự động đếm lùi con số giây này mỗi giây một lần, giúp người dùng biết chính xác khi nào có thể bấm lại.
 
 ---
-*TTD này đã cập nhật theo Spec của BA v2.0.*
+*Lưu ý: Hệ thống Error Code (E20001...) đã được đưa vào Backlog REQ-00023 và sẽ triển khai sau.*

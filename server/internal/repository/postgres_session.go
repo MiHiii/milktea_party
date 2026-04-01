@@ -7,15 +7,8 @@ import (
 	"milktea-server/internal/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-type pgxQuerier interface {
-	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
-	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-}
 
 type postgresSessionRepository struct {
 	db   pgxQuerier
@@ -35,28 +28,30 @@ func (r *postgresSessionRepository) WithTx(ctx context.Context, fn func(SessionR
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	defer func() {
-		if p := recover(); p != nil {
-			_ = tx.Rollback(ctx)
-			panic(p)
-		}
-	}()
+	defer tx.Rollback(ctx)
 
-	repo := &postgresSessionRepository{
+	txRepo := &postgresSessionRepository{
 		db:   tx,
 		pool: r.pool,
 	}
 
-	if err := fn(repo); err != nil {
-		_ = tx.Rollback(ctx)
+	if err := fn(txRepo); err != nil {
 		return err
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
+	return tx.Commit(ctx)
+}
 
-	return nil
+func (r *postgresSessionRepository) ParticipantRepo() ParticipantRepository {
+	return &postgresParticipantRepository{db: r.db, pool: r.pool}
+}
+
+func (r *postgresSessionRepository) OrderBatchRepo() OrderBatchRepository {
+	return &postgresOrderBatchRepository{db: r.db, pool: r.pool}
+}
+
+func (r *postgresSessionRepository) OrderItemRepo() OrderItemRepository {
+	return &postgresOrderItemRepository{db: r.db, pool: r.pool}
 }
 
 func (r *postgresSessionRepository) Create(ctx context.Context, s *domain.Session) error {
@@ -64,93 +59,85 @@ func (r *postgresSessionRepository) Create(ctx context.Context, s *domain.Sessio
 		INSERT INTO sessions (
 			slug, room_id, title, host_device_id, shop_link, 
 			host_default_bank_name, host_default_bank_account, host_default_qr_payload, 
-			status, discount_type, discount_value, shipping_fee, 
-			is_split_batch, use_default_qr_for_all, batch_configs, password, admin_secret_hash
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+			status, discount_type, discount_value, shipping_fee, is_split_batch, 
+			use_default_qr_for_all, batch_configs, password, admin_secret_hash, host_last_active
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())
 		RETURNING id, created_at`
 
-	err := r.db.QueryRow(ctx, query,
+	return r.db.QueryRow(ctx, query,
 		s.Slug, s.RoomID, s.Title, s.HostDeviceID, s.ShopLink,
 		s.HostDefaultBankName, s.HostDefaultBankAccount, s.HostDefaultQrPayload,
-		s.Status, s.DiscountType, s.DiscountValue, s.ShippingFee,
-		s.IsSplitBatch, s.UseDefaultQrForAll, s.BatchConfigs, s.Password, s.AdminSecretHash,
+		s.Status, s.DiscountType, s.DiscountValue, s.ShippingFee, s.IsSplitBatch,
+		s.UseDefaultQrForAll, s.BatchConfigs, s.Password, s.AdminSecretHash,
 	).Scan(&s.ID, &s.CreatedAt)
-
-	if err != nil {
-		return fmt.Errorf("failed to create session: %w", err)
-	}
-
-	return nil
 }
 
 func (r *postgresSessionRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Session, error) {
 	query := `
 		SELECT id, slug, room_id, title, host_device_id, shop_link, 
-		       host_default_bank_name, host_default_bank_account, host_default_qr_payload, 
-		       status, discount_type, discount_value, shipping_fee, 
-		       is_split_batch, use_default_qr_for_all, batch_configs, password, admin_secret_hash, created_at
+			host_default_bank_name, host_default_bank_account, host_default_qr_payload, 
+			status, discount_type, discount_value, shipping_fee, is_split_batch, 
+			use_default_qr_for_all, batch_configs, password, admin_secret_hash, host_last_active, created_at
 		FROM sessions WHERE id = $1`
 
 	var s domain.Session
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&s.ID, &s.Slug, &s.RoomID, &s.Title, &s.HostDeviceID, &s.ShopLink,
 		&s.HostDefaultBankName, &s.HostDefaultBankAccount, &s.HostDefaultQrPayload,
-		&s.Status, &s.DiscountType, &s.DiscountValue, &s.ShippingFee,
-		&s.IsSplitBatch, &s.UseDefaultQrForAll, &s.BatchConfigs, &s.Password, &s.AdminSecretHash, &s.CreatedAt,
+		&s.Status, &s.DiscountType, &s.DiscountValue, &s.ShippingFee, &s.IsSplitBatch,
+		&s.UseDefaultQrForAll, &s.BatchConfigs, &s.Password, &s.AdminSecretHash, &s.HostLastActive, &s.CreatedAt,
 	)
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to get session by id: %w", err)
+		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 
-	s.HasPassword = s.Password != nil && *s.Password != ""
 	return &s, nil
 }
 
 func (r *postgresSessionRepository) GetByIDForUpdate(ctx context.Context, id uuid.UUID) (*domain.Session, error) {
 	query := `
 		SELECT id, slug, room_id, title, host_device_id, shop_link, 
-		       host_default_bank_name, host_default_bank_account, host_default_qr_payload, 
-		       status, discount_type, discount_value, shipping_fee, 
-		       is_split_batch, use_default_qr_for_all, batch_configs, password, admin_secret_hash, created_at
+			host_default_bank_name, host_default_bank_account, host_default_qr_payload, 
+			status, discount_type, discount_value, shipping_fee, is_split_batch, 
+			use_default_qr_for_all, batch_configs, password, admin_secret_hash, host_last_active, created_at
 		FROM sessions WHERE id = $1 FOR UPDATE`
 
 	var s domain.Session
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&s.ID, &s.Slug, &s.RoomID, &s.Title, &s.HostDeviceID, &s.ShopLink,
 		&s.HostDefaultBankName, &s.HostDefaultBankAccount, &s.HostDefaultQrPayload,
-		&s.Status, &s.DiscountType, &s.DiscountValue, &s.ShippingFee,
-		&s.IsSplitBatch, &s.UseDefaultQrForAll, &s.BatchConfigs, &s.Password, &s.AdminSecretHash, &s.CreatedAt,
+		&s.Status, &s.DiscountType, &s.DiscountValue, &s.ShippingFee, &s.IsSplitBatch,
+		&s.UseDefaultQrForAll, &s.BatchConfigs, &s.Password, &s.AdminSecretHash, &s.HostLastActive, &s.CreatedAt,
 	)
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to get session by id for update: %w", err)
+		return nil, fmt.Errorf("failed to get session for update: %w", err)
 	}
 
-	s.HasPassword = s.Password != nil && *s.Password != ""
 	return &s, nil
 }
 
 func (r *postgresSessionRepository) GetBySlug(ctx context.Context, slug string) (*domain.Session, error) {
 	query := `
 		SELECT id, slug, room_id, title, host_device_id, shop_link, 
-		       host_default_bank_name, host_default_bank_account, host_default_qr_payload, 
-		       status, discount_type, discount_value, shipping_fee, 
-		       is_split_batch, use_default_qr_for_all, batch_configs, password, admin_secret_hash, created_at
+			host_default_bank_name, host_default_bank_account, host_default_qr_payload, 
+			status, discount_type, discount_value, shipping_fee, is_split_batch, 
+			use_default_qr_for_all, batch_configs, password, admin_secret_hash, host_last_active, created_at
 		FROM sessions WHERE slug = $1 OR room_id = $1`
 
 	var s domain.Session
 	err := r.db.QueryRow(ctx, query, slug).Scan(
 		&s.ID, &s.Slug, &s.RoomID, &s.Title, &s.HostDeviceID, &s.ShopLink,
 		&s.HostDefaultBankName, &s.HostDefaultBankAccount, &s.HostDefaultQrPayload,
-		&s.Status, &s.DiscountType, &s.DiscountValue, &s.ShippingFee,
-		&s.IsSplitBatch, &s.UseDefaultQrForAll, &s.BatchConfigs, &s.Password, &s.AdminSecretHash, &s.CreatedAt,
+		&s.Status, &s.DiscountType, &s.DiscountValue, &s.ShippingFee, &s.IsSplitBatch,
+		&s.UseDefaultQrForAll, &s.BatchConfigs, &s.Password, &s.AdminSecretHash, &s.HostLastActive, &s.CreatedAt,
 	)
 
 	if err != nil {
@@ -160,27 +147,25 @@ func (r *postgresSessionRepository) GetBySlug(ctx context.Context, slug string) 
 		return nil, fmt.Errorf("failed to get session by slug: %w", err)
 	}
 
-	s.HasPassword = s.Password != nil && *s.Password != ""
 	return &s, nil
 }
 
 func (r *postgresSessionRepository) Update(ctx context.Context, s *domain.Session) error {
 	query := `
-		UPDATE sessions SET
-			title = $1, shop_link = $2, 
-			host_default_bank_name = $3, host_default_bank_account = $4, host_default_qr_payload = $5, 
-			status = $6, discount_type = $7, discount_value = $8, shipping_fee = $9, 
-			is_split_batch = $10, use_default_qr_for_all = $11, batch_configs = $12, password = $13,
-			admin_secret_hash = $14, host_device_id = $15
-		WHERE id = $16`
+		UPDATE sessions SET 
+			title = $1, shop_link = $2, host_default_bank_name = $3, 
+			host_default_bank_account = $4, host_default_qr_payload = $5, 
+			status = $6, discount_type = $7, discount_value = $8, 
+			shipping_fee = $9, is_split_batch = $10, use_default_qr_for_all = $11, 
+			batch_configs = $12, password = $13, host_device_id = $14
+		WHERE id = $15`
 
 	_, err := r.db.Exec(ctx, query,
-		s.Title, s.ShopLink,
-		s.HostDefaultBankName, s.HostDefaultBankAccount, s.HostDefaultQrPayload,
-		s.Status, s.DiscountType, s.DiscountValue, s.ShippingFee,
-		s.IsSplitBatch, s.UseDefaultQrForAll, s.BatchConfigs, s.Password,
-		s.AdminSecretHash, s.HostDeviceID,
-		s.ID,
+		s.Title, s.ShopLink, s.HostDefaultBankName,
+		s.HostDefaultBankAccount, s.HostDefaultQrPayload,
+		s.Status, s.DiscountType, s.DiscountValue,
+		s.ShippingFee, s.IsSplitBatch, s.UseDefaultQrForAll,
+		s.BatchConfigs, s.Password, s.HostDeviceID, s.ID,
 	)
 
 	if err != nil {
@@ -190,32 +175,43 @@ func (r *postgresSessionRepository) Update(ctx context.Context, s *domain.Sessio
 	return nil
 }
 
+func (r *postgresSessionRepository) UpdateHostLastActive(ctx context.Context, id uuid.UUID) error {
+	query := `UPDATE sessions SET host_last_active = NOW() WHERE id = $1`
+	_, err := r.db.Exec(ctx, query, id)
+	return err
+}
+
 func (r *postgresSessionRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM sessions WHERE id = $1`
 	_, err := r.db.Exec(ctx, query, id)
-	if err != nil {
-		return fmt.Errorf("failed to delete session: %w", err)
-	}
-	return nil
+	return err
 }
 
 func (r *postgresSessionRepository) ListByHost(ctx context.Context, hostDeviceID uuid.UUID) ([]domain.Session, error) {
 	query := `
-		SELECT id, slug, title, host_device_id, status, created_at
-		FROM sessions WHERE host_device_id = $1 ORDER BY created_at DESC LIMIT 50`
+		SELECT id, slug, room_id, title, host_device_id, shop_link, 
+			host_default_bank_name, host_default_bank_account, host_default_qr_payload, 
+			status, discount_type, discount_value, shipping_fee, is_split_batch, 
+			use_default_qr_for_all, batch_configs, password, admin_secret_hash, host_last_active, created_at
+		FROM sessions WHERE host_device_id = $1 ORDER BY created_at DESC`
 
 	rows, err := r.db.Query(ctx, query, hostDeviceID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list sessions by host: %w", err)
+		return nil, err
 	}
 	defer rows.Close()
 
 	sessions := []domain.Session{}
 	for rows.Next() {
 		var s domain.Session
-		err := rows.Scan(&s.ID, &s.Slug, &s.Title, &s.HostDeviceID, &s.Status, &s.CreatedAt)
+		err := rows.Scan(
+			&s.ID, &s.Slug, &s.RoomID, &s.Title, &s.HostDeviceID, &s.ShopLink,
+			&s.HostDefaultBankName, &s.HostDefaultBankAccount, &s.HostDefaultQrPayload,
+			&s.Status, &s.DiscountType, &s.DiscountValue, &s.ShippingFee, &s.IsSplitBatch,
+			&s.UseDefaultQrForAll, &s.BatchConfigs, &s.Password, &s.AdminSecretHash, &s.HostLastActive, &s.CreatedAt,
+		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan session: %w", err)
+			return nil, err
 		}
 		sessions = append(sessions, s)
 	}
@@ -223,25 +219,30 @@ func (r *postgresSessionRepository) ListByHost(ctx context.Context, hostDeviceID
 }
 
 func (r *postgresSessionRepository) ListByIDs(ctx context.Context, ids []uuid.UUID) ([]domain.Session, error) {
-	if len(ids) == 0 {
-		return []domain.Session{}, nil
-	}
 	query := `
-		SELECT id, slug, title, host_device_id, status, created_at
-		FROM sessions WHERE id = ANY($1) ORDER BY created_at DESC LIMIT 50`
+		SELECT id, slug, room_id, title, host_device_id, shop_link, 
+			host_default_bank_name, host_default_bank_account, host_default_qr_payload, 
+			status, discount_type, discount_value, shipping_fee, is_split_batch, 
+			use_default_qr_for_all, batch_configs, password, admin_secret_hash, host_last_active, created_at
+		FROM sessions WHERE id = ANY($1) ORDER BY created_at DESC`
 
 	rows, err := r.db.Query(ctx, query, ids)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list sessions by ids: %w", err)
+		return nil, err
 	}
 	defer rows.Close()
 
 	sessions := []domain.Session{}
 	for rows.Next() {
 		var s domain.Session
-		err := rows.Scan(&s.ID, &s.Slug, &s.Title, &s.HostDeviceID, &s.Status, &s.CreatedAt)
+		err := rows.Scan(
+			&s.ID, &s.Slug, &s.RoomID, &s.Title, &s.HostDeviceID, &s.ShopLink,
+			&s.HostDefaultBankName, &s.HostDefaultBankAccount, &s.HostDefaultQrPayload,
+			&s.Status, &s.DiscountType, &s.DiscountValue, &s.ShippingFee, &s.IsSplitBatch,
+			&s.UseDefaultQrForAll, &s.BatchConfigs, &s.Password, &s.AdminSecretHash, &s.HostLastActive, &s.CreatedAt,
+		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan session: %w", err)
+			return nil, err
 		}
 		sessions = append(sessions, s)
 	}
@@ -255,25 +256,4 @@ func (r *postgresSessionRepository) CleanupOldSessions(ctx context.Context, days
 		return 0, fmt.Errorf("failed to cleanup old sessions: %w", err)
 	}
 	return result.RowsAffected(), nil
-}
-
-func (r *postgresSessionRepository) ParticipantRepo() ParticipantRepository {
-	return &postgresParticipantRepository{
-		db:   r.db,
-		pool: r.pool,
-	}
-}
-
-func (r *postgresSessionRepository) OrderBatchRepo() OrderBatchRepository {
-	return &postgresOrderBatchRepository{
-		db:   r.db,
-		pool: r.pool,
-	}
-}
-
-func (r *postgresSessionRepository) OrderItemRepo() OrderItemRepository {
-	return &postgresOrderItemRepository{
-		db:   r.db,
-		pool: r.pool,
-	}
 }

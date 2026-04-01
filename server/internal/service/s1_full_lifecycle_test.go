@@ -23,7 +23,7 @@ func TestS1_FullLifecycle_Broad(t *testing.T) {
 	mockSessionRepo.On("OrderBatchRepo").Return(mockOrderBatchRepo)
 
 	// Injections (Using manual service creation to avoid real bcrypt overhead in broad test)
-	billingSvc := NewBillingService(mockSessionRepo)
+	billingSvc := NewBillingService(mockSessionRepo, mockParticipantRepo, mockOrderItemRepo, mockOrderBatchRepo)
 
 	// IDs
 	sessionID := uuid.New()

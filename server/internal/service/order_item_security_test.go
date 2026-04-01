@@ -11,80 +11,6 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type MockOrderItemRepo struct {
-	mock.Mock
-}
-
-func (m *MockOrderItemRepo) Create(ctx context.Context, i *domain.OrderItem) error {
-	args := m.Called(ctx, i)
-	return args.Error(0)
-}
-
-func (m *MockOrderItemRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.OrderItem, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*domain.OrderItem), args.Error(1)
-}
-
-func (m *MockOrderItemRepo) GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]domain.OrderItem, error) {
-	args := m.Called(ctx, sessionID)
-	return args.Get(0).([]domain.OrderItem), args.Error(1)
-}
-
-func (m *MockOrderItemRepo) GetByParticipantID(ctx context.Context, participantID uuid.UUID) ([]domain.OrderItem, error) {
-	args := m.Called(ctx, participantID)
-	return args.Get(0).([]domain.OrderItem), args.Error(1)
-}
-
-func (m *MockOrderItemRepo) Update(ctx context.Context, item *domain.OrderItem) error {
-	args := m.Called(ctx, item)
-	return args.Error(0)
-}
-
-func (m *MockOrderItemRepo) BulkUpdateBatch(ctx context.Context, sessionID uuid.UUID, oldBatchID *uuid.UUID, newBatchID *uuid.UUID) error {
-	args := m.Called(ctx, sessionID, oldBatchID, newBatchID)
-	return args.Error(0)
-}
-
-func (m *MockOrderItemRepo) Delete(ctx context.Context, id uuid.UUID) error {
-
-	args := m.Called(ctx, id)
-	return args.Error(0)
-}
-
-func (m *MockParticipantRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Participant, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*domain.Participant), args.Error(1)
-}
-
-func (m *MockParticipantRepo) GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]domain.Participant, error) {
-	args := m.Called(ctx, sessionID)
-	return args.Get(0).([]domain.Participant), args.Error(1)
-}
-
-func (m *MockParticipantRepo) Update(ctx context.Context, p *domain.Participant) error {
-	args := m.Called(ctx, p)
-	return args.Error(0)
-}
-
-func (m *MockParticipantRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	args := m.Called(ctx, id)
-	return args.Error(0)
-}
-
-func (m *MockParticipantRepo) UpdateLastActive(ctx context.Context, id uuid.UUID) (*domain.Participant, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*domain.Participant), args.Error(1)
-}
-
 func TestOrderItemSecurity_IDOR(t *testing.T) {
 	mockRepo := new(MockOrderItemRepo)
 	mockSessionRepo := new(MockSessionRepo)
@@ -147,13 +73,14 @@ func TestOrderItemSecurity_IDOR(t *testing.T) {
 
 func TestParticipantSecurity_IDOR(t *testing.T) {
 	mockPartRepo := new(MockParticipantRepo)
+	mockSessionRepo := new(MockSessionRepo)
 	hub := websocket.NewHub()
 	
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go hub.Run(ctx)
 
-	svc := NewParticipantService(mockPartRepo, hub)
+	svc := NewParticipantService(mockPartRepo, mockSessionRepo, hub)
 
 	deviceID := uuid.New()
 	otherDeviceID := uuid.New()
@@ -167,6 +94,7 @@ func TestParticipantSecurity_IDOR(t *testing.T) {
 	t.Run("UpdateLastActive with correct deviceID should succeed", func(t *testing.T) {
 		mockPartRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil).Once()
 		mockPartRepo.On("UpdateLastActive", mock.Anything, participantID).Return(participant, nil).Once()
+		mockSessionRepo.On("GetByID", mock.Anything, mock.Anything).Return(&domain.Session{HostDeviceID: uuid.New()}, nil).Once()
 
 		err := svc.UpdateLastActive(context.Background(), participantID, deviceID)
 		assert.NoError(t, err)

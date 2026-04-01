@@ -17,11 +17,7 @@ func TestBilling_E2E_Scenario(t *testing.T) {
 	mockOrderItemRepo := new(MockOrderItemRepo)
 	mockOrderBatchRepo := new(MockOrderBatchRepo)
 
-	mockSessionRepo.On("ParticipantRepo").Return(mockParticipantRepo)
-	mockSessionRepo.On("OrderItemRepo").Return(mockOrderItemRepo)
-	mockSessionRepo.On("OrderBatchRepo").Return(mockOrderBatchRepo)
-
-	svc := NewBillingService(mockSessionRepo)
+	svc := NewBillingService(mockSessionRepo, mockParticipantRepo, mockOrderItemRepo, mockOrderBatchRepo)
 
 	// IDs
 	sessionID := uuid.New()

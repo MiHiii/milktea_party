@@ -14,6 +14,7 @@ type SessionRepository interface {
 	GetByIDForUpdate(ctx context.Context, id uuid.UUID) (*domain.Session, error)
 	GetBySlug(ctx context.Context, slug string) (*domain.Session, error)
 	Update(ctx context.Context, session *domain.Session) error
+	UpdateHostLastActive(ctx context.Context, id uuid.UUID) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	ListByHost(ctx context.Context, hostDeviceID uuid.UUID) ([]domain.Session, error)
 	ListByIDs(ctx context.Context, ids []uuid.UUID) ([]domain.Session, error)
@@ -29,6 +30,7 @@ type ParticipantRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.Participant, error)
 	GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]domain.Participant, error)
 	Update(ctx context.Context, participant *domain.Participant) error
+	UpdateDeviceID(ctx context.Context, id uuid.UUID, deviceID uuid.UUID) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	UpdateLastActive(ctx context.Context, id uuid.UUID) (*domain.Participant, error)
 }
