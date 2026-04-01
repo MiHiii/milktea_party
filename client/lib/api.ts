@@ -13,7 +13,7 @@ const BASE_WS = WS_URL || 'ws://localhost:8080/ws';
 
 const DEVICE_ID_KEY = 'milkteaDeviceId'
 
-export async function fetcher<T>(path: string, options?: RequestInit): Promise<T> {
+export async function fetcher<T>(path: string, options?: RequestInit, retryCount = 0): Promise<T> {
   const deviceId = getOrCreateDeviceId();
   
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -31,9 +31,21 @@ export async function fetcher<T>(path: string, options?: RequestInit): Promise<T
     localStorage.setItem(DEVICE_ID_KEY, newDeviceId);
   }
 
+  // Handle Rate Limiting with automatic retry
+  if (res.status === 429 && retryCount < 1) {
+    // Wait for 2 seconds and retry once
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    return fetcher<T>(path, options, retryCount + 1);
+  }
+
   if (!res.ok) {
     const error = await res.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || `HTTP error! status: ${res.status}`);
+    let msg = 'Unknown error';
+    if (typeof error.error === 'string') msg = error.error;
+    else if (error.error && typeof error.error === 'object' && error.error.message) msg = error.error.message;
+    else if (error.message) msg = error.message;
+    
+    throw new Error(msg || `HTTP error! status: ${res.status}`);
   }
 
   if (res.status === 204) return {} as T;
@@ -64,6 +76,7 @@ export const api = {
         method: 'POST', 
         body: JSON.stringify({ adminSecret, hostName }) 
       }),
+    calculate: (id: string) => fetcher<any>(`/sessions/${id}/calculate`),
   },
   participants: {
     getBySession: (sessionId: string) => fetcher<Participant[]>(`/participants/session/${sessionId}`),

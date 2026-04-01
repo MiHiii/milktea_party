@@ -31,9 +31,27 @@ func (h *ParticipantHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Use device ID from middleware
-	p.DeviceID = middleware.GetDeviceID(c)
+	deviceID := middleware.GetDeviceID(c)
 
+	// If participant ID is provided, it means they are claiming an existing identity
+	if p.ID != uuid.Nil {
+		if err := h.svc.UpdateDeviceID(c.Request.Context(), p.ID, deviceID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": gin.H{
+					"code":    "PROCESS_FAILED",
+					"message": err.Error(),
+				},
+			})
+			return
+		}
+		// Fetch updated participant to return
+		updated, _ := h.svc.GetByID(c.Request.Context(), p.ID)
+		c.JSON(http.StatusOK, gin.H{"data": updated})
+		return
+	}
+
+	// Normal creation
+	p.DeviceID = deviceID
 	if err := h.svc.Create(c.Request.Context(), &p); err != nil {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"error": gin.H{

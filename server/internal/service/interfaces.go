@@ -25,6 +25,7 @@ type ParticipantService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.Participant, error)
 	GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]domain.Participant, error)
 	UpdateLastActive(ctx context.Context, id uuid.UUID, deviceID uuid.UUID) error
+	UpdateDeviceID(ctx context.Context, id uuid.UUID, deviceID uuid.UUID) error
 }
 
 type OrderBatchService interface {

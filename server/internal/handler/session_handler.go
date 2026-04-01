@@ -316,6 +316,7 @@ func (h *SessionHandler) VerifyPassword(c *gin.Context) {
 		"data": gin.H{"success": true},
 	})
 }
+
 func (h *SessionHandler) ClaimHost(c *gin.Context) {
 	slug := c.Param("slug")
 	var req struct {
@@ -324,8 +325,6 @@ func (h *SessionHandler) ClaimHost(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-// ...
-
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": gin.H{
 				"code":    "VALIDATION_FAILED",

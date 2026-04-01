@@ -28,6 +28,13 @@ func DeviceIDMiddleware() gin.HandlerFunc {
 		}
 
 		// Store in context for handlers
+		// Log for debugging heartbeat issues
+		if deviceID == uuid.Nil {
+			// slog.Debug("🔍 Auth: No DeviceID found in header, generated new one", "id", newID)
+		} else {
+			// slog.Debug("🔍 Auth: DeviceID identified", "id", deviceID)
+		}
+
 		c.Set(DeviceIDContextKey, deviceID)
 		c.Next()
 	}

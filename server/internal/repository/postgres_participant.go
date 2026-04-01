@@ -85,6 +85,16 @@ func (r *postgresParticipantRepository) Update(ctx context.Context, p *domain.Pa
 	return nil
 }
 
+func (r *postgresParticipantRepository) UpdateDeviceID(ctx context.Context, id uuid.UUID, deviceID uuid.UUID) error {
+	query := `UPDATE participants SET device_id = $1, last_active = NOW() WHERE id = $2`
+	_, err := r.db.Exec(ctx, query, deviceID, id)
+	if err != nil {
+		return fmt.Errorf("failed to update participant device id: %w", err)
+	}
+	return nil
+}
+
+
 func (r *postgresParticipantRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM participants WHERE id = $1`
 	_, err := r.db.Exec(ctx, query, id)

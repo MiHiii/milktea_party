@@ -253,6 +253,7 @@ func (s *sessionService) Update(ctx context.Context, session *domain.Session, re
 		// Preserve critical fields
 		session.HostDeviceID = existing.HostDeviceID
 		session.AdminSecretHash = existing.AdminSecretHash
+		session.HostLastActive = existing.HostLastActive
 		session.CreatedAt = existing.CreatedAt
 
 		if session.DiscountValue == 0 {
@@ -321,7 +322,6 @@ func (s *sessionService) ClaimHost(ctx context.Context, slug string, adminSecret
 	defer cancel()
 
 	// 0. Rate Limiting Check
-	// ... (giữ nguyên logic rate limit)
 	key := newHostDeviceID.String()
 	s.claimMu.Lock()
 	record, exists := s.claimAttempts[key]
@@ -331,7 +331,7 @@ func (s *sessionService) ClaimHost(ctx context.Context, slug string, adminSecret
 		}
 		if record.count >= 3 {
 			s.claimMu.Unlock()
-			return fmt.Errorf("too many failed attempts, please try again in an hour")
+			return fmt.Errorf("Bạn đã nhập sai vài lần rồi. Hãy thử lại sau 1 tiếng nhé.")
 		}
 	} else {
 		record = &attemptRecord{}
@@ -346,7 +346,7 @@ func (s *sessionService) ClaimHost(ctx context.Context, slug string, adminSecret
 			return err
 		}
 		if session == nil {
-			return fmt.Errorf("session not found")
+			return fmt.Errorf("Phòng không tồn tại.")
 		}
 
 		// 2. Verify Admin Secret
@@ -355,37 +355,42 @@ func (s *sessionService) ClaimHost(ctx context.Context, slug string, adminSecret
 			record.count++
 			record.lastAttempt = time.Now()
 			s.claimMu.Unlock()
-			return fmt.Errorf("invalid admin secret")
+			return fmt.Errorf("Mã chủ phòng chưa chính xác. Bạn kiểm tra lại kỹ nhé!")
 		}
 
-		// 3. Verify Host Name (Case-insensitive)
+		// 3. Verify Identity and Roles
 		participants, err := txRepo.ParticipantRepo().GetBySessionID(ctx, session.ID)
 		if err != nil {
 			return err
 		}
 
 		var currentHost *domain.Participant
-		var newHost *domain.Participant
+		var requester *domain.Participant
 
 		for i := range participants {
-			if participants[i].DeviceID == session.HostDeviceID {
+			if participants[i].IsHost {
 				currentHost = &participants[i]
 			}
 			if participants[i].DeviceID == newHostDeviceID {
-				newHost = &participants[i]
+				requester = &participants[i]
 			}
 		}
 
 		if currentHost == nil {
-			return fmt.Errorf("original host not found")
+			return fmt.Errorf("Không tìm thấy chủ phòng hiện tại.")
 		}
 
+		if requester == nil {
+			return fmt.Errorf("Bạn cần tham gia vào phòng trước khi khôi phục quyền.")
+		}
+
+		// 4. Verify Host Name (Case-insensitive)
 		if strings.ToLower(currentHost.Name) != strings.ToLower(strings.TrimSpace(hostName)) {
 			s.claimMu.Lock()
 			record.count++
 			record.lastAttempt = time.Now()
 			s.claimMu.Unlock()
-			return fmt.Errorf("host name does not match")
+			return fmt.Errorf("Rất tiếc, mã này chỉ dành cho chủ phòng ban đầu.")
 		}
 
 		// Reset count on success
@@ -393,24 +398,27 @@ func (s *sessionService) ClaimHost(ctx context.Context, slug string, adminSecret
 		delete(s.claimAttempts, key)
 		s.claimMu.Unlock()
 
-		// 4. Check Heartbeat
-		if time.Since(currentHost.LastActive) < 2*time.Minute {
-			return fmt.Errorf("current host is still active (active %v ago)", time.Since(currentHost.LastActive).Round(time.Second))
+		// 5. Grace Period Logic (Pháo đài 2 phút)
+		// Check against session.HostLastActive (Only updated by the REAL host device)
+		diff := time.Since(session.HostLastActive)
+		if diff < 2*time.Minute {
+			waitSec := int(120 - diff.Seconds())
+			return fmt.Errorf("Thiết bị khác của bạn vẫn đang mở phòng này. Vui lòng đợi %d giây nữa để chuyển quyền nhé.", waitSec)
 		}
 
-		if newHost == nil {
-			return fmt.Errorf("you must join the session before claiming host")
-		}
-
-		// 4. Atomic Update
+		// 6. Atomic Update
 		// a. Update Session host_device_id
 		session.HostDeviceID = newHostDeviceID
+		session.HostLastActive = time.Now() // New host is now active
 		if err := txRepo.Update(ctx, session); err != nil {
 			return err
 		}
+		if err := txRepo.UpdateHostLastActive(ctx, session.ID); err != nil {
+			return err
+		}
 
-		// b. Update old host participant status
-		if currentHost != nil {
+		// b. Update old host participant status (if different from requester)
+		if currentHost.ID != requester.ID {
 			currentHost.IsHost = false
 			if err := txRepo.ParticipantRepo().Update(ctx, currentHost); err != nil {
 				return err
@@ -418,15 +426,15 @@ func (s *sessionService) ClaimHost(ctx context.Context, slug string, adminSecret
 		}
 
 		// c. Update new host participant status
-		newHost.IsHost = true
-		if err := txRepo.ParticipantRepo().Update(ctx, newHost); err != nil {
+		requester.IsHost = true
+		if err := txRepo.ParticipantRepo().Update(ctx, requester); err != nil {
 			return err
 		}
 
-		// 5. Broadcast change
+		// 7. Broadcast change
 		s.hub.Broadcast(session.ID.String(), "host_changed", map[string]any{
-			"new_host_name":      newHost.Name,
-			"new_host_device_id": newHost.DeviceID,
+			"new_host_name":      requester.Name,
+			"new_host_device_id": requester.DeviceID,
 			"timestamp":          time.Now(),
 		})
 

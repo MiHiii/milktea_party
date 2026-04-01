@@ -54,6 +54,7 @@ export interface Participant {
   isHost: boolean
   isPaid: boolean
   lastActive: string
+  isOnline: boolean
 }
 
 export interface OrderItem {

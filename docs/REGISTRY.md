@@ -1,7 +1,7 @@
 # 📊 Milktea Party — Task Registry & Progress Tracking (v4.0)
 
-**Project Status:** 🌀 **SPRINT 1 IN PROGRESS** | **Global Health:** ✅ All Systems Nominal
-**Last Sync:** 2026-03-28T13:00 (Updated by /pm)
+**Project Status:** 🌀 **SPRINT 1 IN PROGRESS** | **Global Health:** ⚠️ 2 Bugs Pending
+**Last Sync:** 2026-03-28T16:00 (Updated by /pm)
 
 ---
 
@@ -22,8 +22,11 @@
 | **REQ-00001** | REQ-00001 | S1 | State Machine (6 trạng thái Session) | ✅ | ✅ | ✅ | `DONE` | |
 | **REQ-00002** | REQ-00002 | S1 | DeviceID Identity & Heartbeat | ✅ | ✅ | ✅ | `DONE` | |
 | **REQ-00003** | REQ-00003 | S1 | OrderBatch & Grouping Logic | ✅ | ✅ | ✅ | `DONE` | Multi-batch & Safety Deletion verified |
-| **REQ-00004** | REQ-00004 | S1 | Math: Rounding 1k & Residuals | ⏳ | ⏳ | ⏳ | `READY_FOR_DEV` | **Next Priority** |
+| **REQ-00004** | REQ-00004 | S1 | Math: Rounding 1k & Residuals | ✅ | ✅ | ✅ | `DONE` | Billing Engine UT & FE Integrated |
 | **REQ-00020** | REQ-00020 | S1 | Host Recovery & Re-binding Logic | ✅ | ✅ | ✅ | `DONE` | |
+| **REQ-00021** | — | S2 | UX Hardening: Friendly Error & Rate Limit UI | ⏳ | ⏳ | ⏳ | `BACKLOG` | Tránh ném lỗi thô vào mặt người dùng |
+| **REQ-00022** | — | S2 | UI: Relative Time Formatting (Smart Units) | ⏳ | ⏳ | ⏳ | `BACKLOG` | Chuyển phút -> giờ/ngày/năm |
+| **REQ-00023** | — | S2 | System: Master Message & Error Code Registry | ⏳ | ⏳ | ⏳ | `BACKLOG` | Quản lý thông báo lỗi qua DB/M-Code |
 
 ---
 
@@ -52,6 +55,8 @@
 | Bug ID | Task | Sprint | Mô tả lỗi | Mức độ | Trạng thái | Ghi chú |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **BUG-00022** | — | S1 | Nút password trong HostSettings không ấn được | Medium | Fixed | Đã map đúng props trong SessionClient |
+| **BUG-00023** | REQ-00002 | S1 | Participant không nhận trạng thái Online sau khi join | High | Open | Nghi vấn lỗi Heartbeat/DeviceID |
+| **BUG-00024** | REQ-00020 | S1 | Lỗi \"you must join session\" khi khôi phục quyền Host | High | Open | Hệ quả của BUG-00023 |
 
 ---
 
@@ -60,11 +65,11 @@
 ### Sprint 1 — Summary
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | 20 |
-| **Done** | 19 |
-| **In Progress** | 1 |
-| **Backlog** | 0 |
-| **Open Bugs** | 0 |
+| **Total Tasks** | 22 |
+| **Done** | 20 |
+| **In Progress** | 0 |
+| **Backlog** | 2 |
+| **Open Bugs** | 2 |
 
 ---
-*Ghi chú quản lý: Multi-batch đã hoàn thành xuất sắc. Bắt đầu giai đoạn tính toán tài chính (REQ-00004).*
+*Ghi chú quản lý: Billing Engine đã hoàn tất. Tập trung xử lý lỗi Heartbeat (BUG-00023) để ổn định hệ thống.*

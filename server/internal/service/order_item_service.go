@@ -73,6 +73,8 @@ func (s *orderItemService) Create(ctx context.Context, item *domain.OrderItem, i
 
 	err = s.repo.Create(ctx, item)
 	if err == nil {
+		// Refresh activity status
+		_, _ = s.partRepo.UpdateLastActive(ctx, item.ParticipantID)
 		s.hub.Broadcast(item.SessionID.String(), "order_item_created", item)
 	}
 	return err
@@ -128,6 +130,8 @@ func (s *orderItemService) Update(ctx context.Context, item *domain.OrderItem, d
 
 	err = s.repo.Update(ctx, item)
 	if err == nil {
+		// Refresh activity status
+		_, _ = s.partRepo.UpdateLastActive(ctx, item.ParticipantID)
 		s.hub.Broadcast(item.SessionID.String(), "order_item_updated", item)
 	}
 	return err
@@ -162,5 +166,10 @@ func (s *orderItemService) Delete(ctx context.Context, id uuid.UUID, deviceID uu
 		return fmt.Errorf("unauthorized: you do not own this order item")
 	}
 
-	return s.repo.Delete(ctx, id)
+	err = s.repo.Delete(ctx, id)
+	if err == nil {
+		// Refresh activity status
+		_, _ = s.partRepo.UpdateLastActive(ctx, existing.ParticipantID)
+	}
+	return err
 }

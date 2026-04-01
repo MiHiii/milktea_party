@@ -6,82 +6,12 @@ import (
 	"time"
 
 	"milktea-server/internal/domain"
-	"milktea-server/internal/repository"
 	"milktea-server/internal/websocket"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"golang.org/x/crypto/bcrypt"
 )
-
-// Mock repositories for testing
-type MockSessionRepo struct {
-	mock.Mock
-	repository.SessionRepository
-}
-
-func (m *MockSessionRepo) Create(ctx context.Context, s *domain.Session) error {
-	args := m.Called(ctx, s)
-	return args.Error(0)
-}
-
-func (m *MockSessionRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Session, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*domain.Session), args.Error(1)
-}
-
-func (m *MockSessionRepo) GetByIDForUpdate(ctx context.Context, id uuid.UUID) (*domain.Session, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*domain.Session), args.Error(1)
-}
-
-func (m *MockSessionRepo) Update(ctx context.Context, s *domain.Session) error {
-	args := m.Called(ctx, s)
-	return args.Error(0)
-}
-
-func (m *MockSessionRepo) WithTx(ctx context.Context, fn func(repository.SessionRepository) error) error {
-	return fn(m)
-}
-
-func (m *MockSessionRepo) GetBySlug(ctx context.Context, slug string) (*domain.Session, error) {
-	args := m.Called(ctx, slug)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*domain.Session), args.Error(1)
-}
-
-func (m *MockSessionRepo) ParticipantRepo() repository.ParticipantRepository {
-	args := m.Called()
-	return args.Get(0).(repository.ParticipantRepository)
-}
-
-func (m *MockSessionRepo) OrderBatchRepo() repository.OrderBatchRepository {
-	args := m.Called()
-	return args.Get(0).(repository.OrderBatchRepository)
-}
-
-func (m *MockSessionRepo) OrderItemRepo() repository.OrderItemRepository {
-	args := m.Called()
-	return args.Get(0).(repository.OrderItemRepository)
-}
-
-type MockParticipantRepo struct {
-	mock.Mock
-	repository.ParticipantRepository
-}
-
-func (m *MockParticipantRepo) Create(ctx context.Context, p *domain.Participant) error {
-	args := m.Called(ctx, p)
-	return args.Error(0)
-}
 
 func setupTestSvc() (*sessionService, *MockSessionRepo, *MockParticipantRepo, context.CancelFunc) {
 	mockRepo := new(MockSessionRepo)

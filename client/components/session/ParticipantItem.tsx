@@ -51,20 +51,13 @@ export function ParticipantItem({
   PERCENT_OPTIONS
 }: ParticipantItemProps) {
   const [mounted, setMounted] = React.useState(false)
-  const [now, setNow] = React.useState(Date.now())
 
   React.useEffect(() => {
     setMounted(true)
-    setNow(Date.now())
-    const timer = setInterval(() => setNow(Date.now()), 15000)
-    return () => clearInterval(timer)
   }, [])
 
-  const lastActive = new Date(participant.lastActive).getTime()
-  const isOnline = mounted && (now - lastActive) < 60000
-  const diffMinutes = Math.floor((now - lastActive) / 60000)
-  
-  const statusText = !mounted ? '...' : isOnline ? 'Online' : (diffMinutes > 0 ? `offline ${diffMinutes}p` : 'vừa rời đi')
+  const isOnline = participant.isOnline
+  const statusText = !mounted ? '...' : isOnline ? 'Online' : 'Vừa rời đi'
 
   return (
     <div className="group">

@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef, type ReactNode } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
   CheckCircle, Share2, ExternalLink, Loader2, ShoppingBag, Users, QrCode, Receipt,
-  Lock, Crown, ChevronDown, ArrowLeft, Settings, Eye, EyeOff, Check, Copy, Camera, Image as ImageIcon, ShoppingCart,
-  Trash2, Play, CheckCircle2, XCircle, Banknote, Unlock
+  Lock, Crown, ChevronDown, ArrowLeft, Settings, Eye, EyeOff, Check, Copy, Camera, 
+  Image as ImageIcon, ShoppingCart, Trash2, Play, CheckCircle2, XCircle, Banknote, Unlock, Shield
 } from 'lucide-react'
 import { getOrCreateDeviceId, getParticipantId, setParticipantId, isHost, getHostSecret } from '@/lib/identity'
 import { calculateBill, formatVND } from '@/lib/calc'
@@ -30,6 +30,7 @@ import { BillSummary } from '@/components/session/BillSummary'
 import { ConfirmModal } from '@/components/session/ConfirmModal'
 import { ActionSheet } from '@/components/ui/ActionSheet'
 import { HostSecretToast } from '@/components/session/HostSecretToast'
+import { Toast } from '@/components/ui/Toast'
 
 interface Props {
   initialSession: Session
@@ -46,12 +47,13 @@ const addItemSchema = z.object({
   ice: z.string().optional(),
   sugar: z.string().optional(),
   orderBatchId: z.string().uuid().nullable().optional(),
-  paySeparate: z.boolean().default(true),
+  paySeparate: z.boolean().default(false),
 })
 
 const PERCENT_OPTIONS = ['0%', '30%', '50%', '70%', '100%']
 
 export default function SessionClient({ initialSession, initialParticipants, initialItems, initialBatches = [] }: Props) {
+  // --- 1. HOOKS: STATES & REFS ---
   const [mounted, setMounted] = useState(false)
   const [session, setSession] = useState<Session>(initialSession)
   const [participants, setParticipants] = useState<Participant[]>(initialParticipants || [])
@@ -66,7 +68,10 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   const [expandedParticipant, setExpandedParticipant] = useState<string | null>(null)
   const [showQrs, setShowQrs] = useState(false)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
-  const [editDraft, setEditDraft] = useState({ itemName: '', price: '', quantity: '', note: '', ice: '50%', sugar: '50%', orderBatchId: null as string | null, paySeparate: false })
+  const [editDraft, setEditDraft] = useState({ 
+    itemName: '', price: '', quantity: '', note: '', ice: '50%', sugar: '50%', 
+    orderBatchId: null as string | null, paySeparate: false 
+  })
   const [justAdded, setJustAdded] = useState(false)
   const [hostControlsOpen, setHostControlsOpen] = useState(false)
   const [finalTotal, setFinalTotal] = useState('')
@@ -87,32 +92,131 @@ export default function SessionClient({ initialSession, initialParticipants, ini
   const [claimModalOpen, setClaimModalOpen] = useState(false)
   const [claimCandidate, setClaimCandidate] = useState<Participant | null>(null)
   const [showBillSummary, setShowBillSummary] = useState(false)
-  const [confirmConfig, setConfirmConfig] = useState<{ isOpen: boolean, title: string, description: ReactNode, onConfirm: () => void, variant?: 'primary' | 'destructive' }>({ isOpen: false, title: '', description: '', onConfirm: () => {} })
+  const [confirmConfig, setConfirmConfig] = useState<{ 
+    isOpen: boolean, title: string, description: ReactNode, 
+    onConfirm: () => void, variant?: 'primary' | 'destructive' 
+  }>({ isOpen: false, title: '', description: '', onConfirm: () => {} })
   
   const [showActionSheet, setShowActionSheet] = useState(false)
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null)
   const [isProcessingQR, setIsProcessingQR] = useState(false)
   const [qrPreviewUrl, setQrPreviewUrl] = useState<string | null>(null)
   const [showChangeToast, setShowChangeToast] = useState(false)
+  const [kickedByOtherDevice, setKickedByOtherDevice] = useState(false)
   
-  // Host Recovery State
+  const [calculatedBill, setCalculatedBill] = useState<any>(null)
   const [showHostSecretToast, setShowHostSecretToast] = useState(false)
   const [recoveryModalOpen, setRecoveryModalOpen] = useState(false)
   const [recoverySecret, setRecoverySecret] = useState('')
-  const [recoveryHostName, setRecoveryHostName] = useState('')
   const [recoveryError, setRecoveryError] = useState('')
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const nameInputRef = useRef('')
 
-  // Moved up to ensure scope availability
+  // --- 2. HOOKS: FORMS ---
+  const addItemForm = useForm({ 
+    resolver: zodResolver(addItemSchema) as any, 
+    defaultValues: { 
+      quantity: 1, itemName: '', price: '' as any, note: '', 
+      sugar: '50%', ice: '50%', orderBatchId: null as string | null, paySeparate: false 
+    } 
+  })
+
+  // --- 3. HOOKS: CALLBACKS ---
+  const showWarning = useCallback((title: string, description: ReactNode) => {
+    setConfirmConfig({ 
+      isOpen: true, title, description, variant: 'primary', 
+      onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false })) 
+    })
+  }, [])
+
+  const copyToClipboard = useCallback((text: string) => { 
+    const el = document.createElement("textarea")
+    el.value = text
+    document.body.appendChild(el)
+    el.select()
+    document.execCommand('copy')
+    document.body.removeChild(el)
+  }, [])
+
+  const fetchBill = useCallback(async () => {
+    if (session.status !== 'settling' && session.status !== 'completed') return
+    try {
+      const data = await api.sessions.calculate(session.id)
+      setCalculatedBill(data)
+    } catch (e) {
+      console.error('Failed to fetch calculated bill:', e)
+    }
+  }, [session.id, session.status])
+
+  const fetchLatestData = useCallback(async () => {
+    try {
+      const [s, p, i, b] = await Promise.all([
+        api.sessions.getBySlug(session.slug),
+        api.participants.getBySession(session.id),
+        api.orderItems.getBySession(session.id),
+        api.orderBatches.getBySession(session.id)
+      ])
+      setSession(s)
+      setParticipants(p || [])
+      setOrderItems(i || [])
+      setOrderBatches(b || [])
+    } catch (e: any) {
+      console.error('Failed to re-sync data:', e)
+    }
+  }, [session.id, session.slug])
+
+  const updateSessionStatus = useCallback(async (status: Session['status'], title: string, description: ReactNode, variant: 'primary' | 'destructive' = 'primary') => {
+    setConfirmConfig({ 
+      isOpen: true, title, description, variant, 
+      onConfirm: async () => { 
+        setIsLoading(true)
+        try {
+          await api.sessions.update(session.id, { status })
+          setConfirmConfig(prev => ({ ...prev, isOpen: false }))
+        } finally {
+          setIsLoading(false)
+        }
+      } 
+    })
+  }, [session.id])
+
+  const onSaveBatchTotal = useCallback(async (e?: React.SyntheticEvent) => {
+    if (e) e.preventDefault()
+    setIsLoading(true)
+    try {
+      if (session.isSplitBatch) {
+        const nC: Record<string, any> = { ...((session.batchConfigs as Record<string, any>) || {}) }
+        orderBatches.forEach(batch => {
+          const val = batchFinalTotals[batch.id] || ''
+          if (val && Number(val) >= 0) {
+            const bT = Number(val)
+            const bIT = orderItems.filter(i => i.orderBatchId === batch.id).reduce((s, i) => s + i.price * i.quantity, 0)
+            nC[batch.name] = bT >= bIT ? { type: 'amount', value: 0, ship: bT - bIT } : { type: 'amount', value: bIT - bT, ship: 0 }
+          }
+        })
+        await api.sessions.update(session.id, { batchConfigs: nC })
+      } else {
+        const iGT = orderItems.reduce((s, i) => s + i.price * i.quantity, 0)
+        const t = Number(finalTotal)
+        if (t && t >= 0) {
+          const dV = t < iGT ? iGT - t : 0
+          const sF = t > iGT ? t - iGT : 0
+          await api.sessions.update(session.id, { discountType: 'amount', discountValue: dV, shippingFee: sF })
+        }
+      }
+      setHostControlsOpen(false)
+    } finally { setIsLoading(false) }
+  }, [session, orderBatches, batchFinalTotals, orderItems, finalTotal])
+
   const onTogglePassword = useCallback(async (enabled: boolean) => {
     if (!enabled) {
       setConfirmConfig({
-        isOpen: true,
-        title: 'Gỡ mật khẩu?',
-        description: 'Bất kỳ ai có link đều có thể vào xem và đặt món. Bạn có chắc chắn không?',
+        isOpen: true, 
+        title: 'Gỡ mật khẩu?', 
+        description: 'Bất kỳ ai có link đều có thể vào xem và đặt món. Bạn có chắc chắn không?', 
         variant: 'destructive',
         onConfirm: async () => {
           setIsLoading(true)
@@ -121,9 +225,7 @@ export default function SessionClient({ initialSession, initialParticipants, ini
             setSession(prev => ({ ...prev, hasPassword: false }))
             setShowPasswordEdit(false)
             setConfirmConfig(prev => ({ ...prev, isOpen: false }))
-          } finally {
-            setIsLoading(false)
-          }
+          } finally { setIsLoading(false) }
         }
       })
     } else {
@@ -139,298 +241,68 @@ export default function SessionClient({ initialSession, initialParticipants, ini
       setSession(prev => ({ ...prev, hasPassword: true }))
       setShowPasswordEdit(false)
       setHostPasswordDraft('')
-    } finally {
-      setIsLoading(false)
-    }
+    } finally { setIsLoading(false) }
   }, [session.id, hostPasswordDraft])
 
-  const showWarning = (title: string, description: ReactNode) => {
-    setConfirmConfig({ isOpen: true, title, description, variant: 'primary', onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false })) })
-  }
-
-  // 1. Initial State & Logic Cleanup
-  useEffect(() => {
-    setMounted(true)
-    const amHost = isHost(initialSession.hostDeviceId)
-    setIAmHost(amHost)
-
-    if (initialSession.hasPassword) {
-      const isVerified = sessionStorage.getItem(`sessionVerified_${initialSession.id}`) === 'true'
-      if (!amHost && !isVerified) setPasswordVerified(false)
-    }
-
-    const savedPid = getParticipantId(initialSession.id)
-    if (savedPid) {
-      setMyParticipantId(savedPid)
-      setExpandedParticipant(savedPid)
-    } else if (amHost) {
-      const hostP = initialParticipants.find(p => p.isHost)
-      if (hostP) {
-        setParticipantId(initialSession.id, hostP.id)
-        setMyParticipantId(hostP.id)
-        setExpandedParticipant(hostP.id)
-      } else setNameModalOpen(true)
-    } else setNameModalOpen(true)
-
-    // Check for admin secret if host
-    if (amHost) {
-      const secret = getHostSecret(initialSession.slug)
-      if (secret) {
-        // Auto-show toast for newly created rooms
-        const isNew = sessionStorage.getItem(`newlyCreated_${initialSession.id}`)
-        if (isNew === 'true') {
-          setShowHostSecretToast(true)
-        }
-      }
-    }
-  }, [initialSession, initialParticipants])
-
-  const claimHost = useCallback(async () => {
-    const myName = participants.find(p => p.id === myParticipantId)?.name
-    if (!myName) return
-
-    setIsLoading(true)
-    setRecoveryError('')
+  const onSaveGlobalBank = useCallback(async (n?: string, a?: string) => {
     try {
-      await api.sessions.claimHost(session.slug, recoverySecret, myName)
-      setRecoveryModalOpen(false)
-      setRecoverySecret('')
-      // WS will broadcast host_changed, which we handle
-    } catch (e: any) {
-      setRecoveryError(e.message || 'Sai mã quản trị hoặc Host cũ vẫn đang online')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [session.slug, recoverySecret, myParticipantId, participants])
+      const bName = n !== undefined ? n : bankNameInput
+      const bAcc = a !== undefined ? a : bankAccountInput
+      await api.sessions.update(session.id, { hostDefaultBankName: bName, hostDefaultBankAccount: bAcc })
+    } catch { }
+  }, [session.id, bankNameInput, bankAccountInput])
 
-  const lastFetchTime = useRef<number>(0)
-
-  // 2. WebSocket & Realtime Sync
-  const fetchLatestData = useCallback(async () => {
-    const now = Date.now()
-    if (now - lastFetchTime.current < 5000) return // Throttle: 5s
-    lastFetchTime.current = now
-
-    try {
-      const [s, p, i, b] = await Promise.all([
-        api.sessions.getBySlug(session.slug),
-        api.participants.getBySession(session.id),
-        api.orderItems.getBySession(session.id),
-        api.orderBatches.getBySession(session.id)
-      ])
-      setSession(s)
-      setParticipants(p || [])
-      setOrderItems(i || [])
-      setOrderBatches(b || [])
-    } catch (e: any) {
-      console.error('Failed to re-sync data:', e)
-      // Reset timer on error to allow retry
-      if (e.message?.includes('Rate limit')) {
-        lastFetchTime.current = now + 30000 // Block for 30s if rate limited
-      } else {
-        lastFetchTime.current = 0 
-      }
-    }
-  }, [session.id, session.slug])
-
-  useEffect(() => {
-    if (!mounted) return
-
-    const ws = createWS(session.id)
-    
-    ws.onopen = () => {
-      // Re-sync data when connection is established/re-established
-      fetchLatestData()
-    }
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data)
-        const payload = msg.payload
-
-        switch (msg.type) {
-          case 'session_updated':
-            setSession(prev => ({ ...prev, ...payload }))
-            break
-          case 'session_cancelled':
-            setSession(prev => ({ ...prev, status: 'cancelled' }))
-            break
-          case 'session_deleted':
-            window.location.href = '/'
-            break
-          case 'participant_created':
-            setParticipants(prev => prev.some(p => p.id === payload.id) ? prev : [...prev, payload])
-            break
-          case 'participant_updated':
-            setParticipants(prev => prev.map(p => p.id === payload.id ? { ...p, ...payload } : p))
-            break
-          case 'order_item_created':
-            setOrderItems(prev => prev.some(i => i.id === payload.id) ? prev : [...prev, payload])
-            break
-          case 'order_item_updated':
-            setOrderItems(prev => prev.map(i => i.id === payload.id ? payload : i))
-            break
-          case 'order_item_deleted':
-            setOrderItems(prev => prev.filter(i => i.id !== payload.id))
-            break
-          case 'order_batch_created':
-            setOrderBatches(prev => prev.some(b => b.id === payload.id) ? prev : [...prev, payload])
-            break
-          case 'order_batch_updated':
-            setOrderBatches(prev => prev.map(b => b.id === payload.id ? payload : b))
-            break
-          case 'order_batch_deleted':
-            setOrderBatches(prev => prev.filter(b => b.id !== payload.id))
-            break
-          case 'host_changed':
-            setSession(prev => ({ ...prev, hostDeviceId: payload.new_host_device_id }))
-            setIAmHost(isHost(payload.new_host_device_id))
-            setShowChangeToast(true)
-            setTimeout(() => setShowChangeToast(false), 5000)
-            fetchLatestData() // Refresh participants to see new host flag
-            break
-        }
-      } catch (e) {
-        console.error('WS parse error:', e)
-      }
-    }
-
-    const heartbeat = setInterval(() => {
-      const pid = getParticipantId(session.id)
-      if (pid) api.participants.heartbeat(pid).catch(() => {})
-    }, 30000)
-
-    return () => {
-      ws.close()
-      clearInterval(heartbeat)
-    }
-  }, [mounted, session.id])
-
-  // 3. Form & UI Actions
-  const addItemForm = useForm({ 
-    resolver: zodResolver(addItemSchema) as any, 
-    defaultValues: { quantity: 1, itemName: '', price: '' as any, note: '', sugar: '50%', ice: '50%', orderBatchId: null as string | null, paySeparate: true } 
-  })
-
-  useEffect(() => { 
-    if (orderBatches.length > 0 && !addItemForm.getValues('orderBatchId')) {
-      const def = orderBatches.find(b => b.isDefault) || orderBatches[0]
-      addItemForm.setValue('orderBatchId', def.id)
-    }
-  }, [orderBatches, addItemForm])
-
-  const deleteItem = useCallback(async (itemId: string) => { 
-    try { await api.orderItems.delete(itemId) } catch { } 
-  }, [])
-  
-  const startEdit = useCallback((item: OrderItemType) => { 
-    setEditingItemId(item.id)
-    setEditDraft({ 
-      itemName: item.itemName, 
-      price: String(item.price), 
-      quantity: String(item.quantity), 
-      note: item.note || '', 
-      ice: item.ice || '50%', 
-      sugar: item.sugar || '50%', 
-      orderBatchId: item.orderBatchId, 
-      paySeparate: !!item.paySeparate 
-    }) 
-  }, [])
-  
-  const saveEdit = useCallback(async (itemId: string) => { 
-    if (Number(editDraft.price) % 100 !== 0) { showWarning('Số tiền không hợp lệ', 'Vui lòng nhập số tiền chia hết cho 100'); return } 
+  const onAddBatch = useCallback(async () => { 
+    if (!newBatchDraft) return
     setIsLoading(true)
     try { 
-      await api.orderItems.update(itemId, { 
-        itemName: editDraft.itemName, 
-        price: Number(editDraft.price), 
-        quantity: Number(editDraft.quantity), 
-        note: editDraft.note || null, 
-        ice: editDraft.ice || null, 
-        sugar: editDraft.sugar || null, 
-        orderBatchId: editDraft.orderBatchId,
-        paySeparate: !!editDraft.paySeparate 
-      })
-      setEditingItemId(null)
+      await api.orderBatches.create({ sessionId: session.id, name: newBatchDraft })
+      setNewBatchDraft('')
+      setShowNewBatch(false) 
     } finally { setIsLoading(false) } 
-  }, [editDraft])
-  
-  const addItem = useCallback(async (data: any) => { 
-    if (Number(data.price) % 100 !== 0) { showWarning('Số tiền không hợp lệ', 'Vui lòng nhập số tiền chia hết cho 100'); return } 
-    if (!myParticipantId) return 
-    setIsLoading(true)
-    try { 
-      await api.orderItems.create({ 
-        sessionId: session.id, 
-        participantId: myParticipantId, 
-        itemName: data.itemName, 
-        price: Number(data.price), 
-        quantity: data.quantity, 
-        note: data.note || null, 
-        ice: data.ice || null, 
-        sugar: data.sugar || null, 
-        orderBatchId: data.orderBatchId,
-        paySeparate: !!data.paySeparate 
-      })
-      addItemForm.reset({ ...addItemForm.getValues(), itemName: '', price: '' as any, note: '' })
-      setJustAdded(true)
-      setTimeout(() => setJustAdded(false), 2000)
-    } finally { setIsLoading(false) } 
-  }, [session.id, myParticipantId, addItemForm])
+  }, [session.id, newBatchDraft])
 
-  const copyToClipboard = useCallback((text: string) => { 
-    const el = document.createElement("textarea")
-    el.value = text
-    document.body.appendChild(el)
-    el.select()
-    document.execCommand('copy')
-    document.body.removeChild(el)
-  }, [])
-
-  const shareLink = useCallback(() => { 
-    const url = window.location.href
-    if (navigator.share) navigator.share({ title: session.title, url })
-    else { 
-      copyToClipboard(url)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } 
-  }, [session.title, copyToClipboard])
-
-  const copySessionId = useCallback(() => { 
-    copyToClipboard(session.slug)
-    setCopiedId(true)
-    setTimeout(() => setCopiedId(false), 2000)
-  }, [session.slug, copyToClipboard])
-
-  // 4. Host Logic
-  const updateSessionStatus = useCallback(async (status: Session['status'], title: string, description: ReactNode, variant: 'primary' | 'destructive' = 'primary') => {
+  const onDeleteBatch = useCallback(async (batchId: string, name: string) => {
     setConfirmConfig({ 
-      isOpen: true, title, description, variant, 
+      isOpen: true, title: 'Xoá đợt đơn?', description: `Xoá "${name}" và toàn bộ món bên trong?`, variant: 'destructive', 
       onConfirm: async () => { 
         setIsLoading(true)
         try { 
-          await api.sessions.update(session.id, { status })
+          await api.orderBatches.delete(batchId)
           setConfirmConfig(prev => ({ ...prev, isOpen: false })) 
         } finally { setIsLoading(false) } 
       } 
     })
-  }, [session.id])
+  }, [])
 
-  const lockOrder = useCallback(() => {
-    if (!session.hostDefaultBankAccount || !session.hostDefaultBankName) {
-      showWarning('Thiếu thông tin Bank', 'Vui lòng bổ sung STK và Ngân hàng của Host.')
-      setHostControlsOpen(true)
-      return
+  const onUpdateBatchName = useCallback(async (batchId: string, newName: string) => { 
+    try { await api.orderBatches.update(batchId, { name: newName }) } catch { } 
+  }, [])
+
+  const onUpdateBatchBank = useCallback(async (batchId: string, n: string, a: string, q: string, d?: number, s?: number) => { 
+    try { await api.orderBatches.update(batchId, { bankName: n, bankAccount: a, qrPayload: q, discountAmount: d, shippingFee: s }) } 
+    catch { } 
+  }, [])
+
+  const onToggleSplitBatch = useCallback(async (isSplit: boolean) => {
+    const performToggle = async () => { 
+      setIsToggling(true)
+      setSession(prev => ({ ...prev, isSplitBatch: isSplit }))
+      try { 
+        await api.sessions.update(session.id, { isSplitBatch: isSplit })
+        const updatedBatches = await api.orderBatches.getBySession(session.id)
+        setOrderBatches(updatedBatches || []) 
+      } catch (e) { 
+        setSession(prev => ({ ...prev, isSplitBatch: !isSplit })) 
+      } finally { setIsToggling(false) } 
     }
-    updateSessionStatus('locked', 'Chốt đơn?', 'Guest sẽ không thể thêm/sửa món.')
-  }, [session, updateSessionStatus])
-
-  const unlockOrder = useCallback(() => updateSessionStatus('open', 'Mở lại đơn?', 'Guest có thể tiếp tục đặt món.'), [updateSessionStatus])
-  const placeOrder = useCallback(() => updateSessionStatus('ordered', 'Đã đặt hàng?', 'Xác nhận bạn đã đặt món với quán.'), [updateSessionStatus])
-  const startSettle = useCallback(() => updateSessionStatus('settling', 'Thu tiền?', 'Bắt đầu tính toán bill và hiển thị QR thanh toán.'), [updateSessionStatus])
-  const completeSession = useCallback(() => updateSessionStatus('completed', 'Hoàn thành?', 'Đánh dấu session đã kết thúc.', 'primary'), [updateSessionStatus])
-  const cancelSession = useCallback(() => updateSessionStatus('cancelled', 'Hủy phòng?', 'Tất cả dữ liệu sẽ bị khóa và không thể khôi phục.', 'destructive'), [updateSessionStatus])
+    if (!isSplit) {
+      setConfirmConfig({ 
+        isOpen: true, title: 'Tắt chia đơn?', description: 'Hành động này sẽ gộp tất cả món ăn về một đơn duy nhất. Bạn có chắc chắn không?', variant: 'destructive', 
+        onConfirm: () => { setConfirmConfig(prev => ({ ...prev, isOpen: false })); performToggle() } 
+      })
+    } else performToggle()
+  }, [session.id])
 
   const claimName = useCallback(async (name: string) => { 
     if (!name.trim()) return
@@ -453,198 +325,271 @@ export default function SessionClient({ initialSession, initialParticipants, ini
     } finally { setIsLoading(false) } 
   }, [session.id, participants])
 
-  const confirmClaim = useCallback(() => { 
+  const confirmClaim = useCallback(async () => { 
     if (claimCandidate) { 
-      setParticipantId(session.id, claimCandidate.id)
-      setMyParticipantId(claimCandidate.id)
-      setExpandedParticipant(claimCandidate.id)
-      setClaimModalOpen(false) 
+      setIsLoading(true)
+      try { 
+        const res = await api.participants.create({ id: claimCandidate.id, sessionId: session.id })
+        if (res?.id) { 
+          setParticipantId(session.id, res.id)
+          setMyParticipantId(res.id)
+          setExpandedParticipant(res.id)
+          setClaimModalOpen(false)
+          api.participants.heartbeat(res.id).catch(() => {}) 
+        } 
+      } finally { setIsLoading(false) } 
     } 
   }, [session.id, claimCandidate])
 
-  // Other host actions (Batch, Bank, Password) using api object...
-  const onAddBatch = useCallback(async () => { 
-    if (!newBatchDraft) return
+  const claimHost = useCallback(async () => {
+    const myName = participants.find(p => p.id === myParticipantId)?.name
+    if (!myName) return
     setIsLoading(true)
-    try { 
-      await api.orderBatches.create({ sessionId: session.id, name: newBatchDraft })
-      setNewBatchDraft('')
-      setShowNewBatch(false) 
-    } finally { setIsLoading(false) } 
-  }, [session.id, newBatchDraft])
-
-  const onDeleteBatch = useCallback(async (batchId: string, name: string) => {
-    setConfirmConfig({
-      isOpen: true, title: 'Xoá đợt đơn?', description: `Xoá "${name}" và toàn bộ món bên trong?`, variant: 'destructive', 
-      onConfirm: async () => { 
-        setIsLoading(true)
-        try { 
-          await api.orderBatches.delete(batchId)
-          setConfirmConfig(prev => ({ ...prev, isOpen: false })) 
-        } finally { setIsLoading(false) } 
-      } 
-    })
-  }, [])
-
-  const onUpdateBatchName = useCallback(async (batchId: string, newName: string) => { 
-    try { await api.orderBatches.update(batchId, { name: newName }) } catch { } 
-  }, [])
-
-  const onUpdateBatchBank = useCallback(async (batchId: string, n: string, a: string, q: string, discount?: number, ship?: number) => { 
-    try { 
-      await api.orderBatches.update(batchId, { 
-        bankName: n, 
-        bankAccount: a, 
-        qrPayload: q,
-        discountAmount: discount,
-        shippingFee: ship
-      }) 
-    } catch { } 
-  }, [])
-
-  const onSaveGlobalBank = useCallback(async (name?: string, account?: string) => { 
-    try { 
-      const bName = name !== undefined ? name : bankNameInput
-      const bAcc = account !== undefined ? account : bankAccountInput
-      await api.sessions.update(session.id, { hostDefaultBankName: bName, hostDefaultBankAccount: bAcc })
-    } catch { } 
-  }, [session.id, bankNameInput, bankAccountInput])
-
-  const onToggleSplitBatch = useCallback(async (isSplit: boolean) => {
-    const performToggle = async () => {
-      setIsToggling(true)
-      // Optimistic Update
-      setSession(prev => ({ ...prev, isSplitBatch: isSplit }))
-      
-      try { 
-        await api.sessions.update(session.id, { 
-          isSplitBatch: isSplit
-        }) 
-        // Important: Fetch latest batches immediately to get "Đơn 1" if newly enabled
-        const updatedBatches = await api.orderBatches.getBySession(session.id)
-        setOrderBatches(updatedBatches || [])
-      } catch (e) {
-        // Rollback on error
-        setSession(prev => ({ ...prev, isSplitBatch: !isSplit }))
-      } finally { 
-        setIsToggling(false) 
-      }
-    }
-
-    if (!isSplit) {
-      setConfirmConfig({
-        isOpen: true,
-        title: 'Tắt chia đơn?',
-        description: 'Hành động này sẽ gộp tất cả món ăn về một đơn duy nhất. Toàn bộ đợt đơn con sẽ bị xoá. Bạn có chắc chắn không?',
-        variant: 'destructive',
-        onConfirm: () => {
-          setConfirmConfig(prev => ({ ...prev, isOpen: false }))
-          performToggle()
-        }
-      })
-    } else {
-      performToggle()
-    }
-  }, [session.id])
-
-  const onSaveBatchTotal = useCallback(async (e?: React.SyntheticEvent) => {
-    if (e) e.preventDefault()
-    setIsLoading(true)
+    setRecoveryError('')
     try {
-      if (session.isSplitBatch) {
-        const nC: Record<string, any> = { ...((session.batchConfigs as Record<string, any>) || {}) }
-        orderBatches.forEach(batch => { 
-          const val = batchFinalTotals[batch.id] || ''
-          if (val && Number(val) >= 0) { 
-            const bT = Number(val)
-            const bIT = orderItems.filter(i => i.orderBatchId === batch.id).reduce((s, i) => s + i.price * i.quantity, 0)
-            nC[batch.name] = bT >= bIT ? { type: 'amount', value: 0, ship: bT - bIT } : { type: 'amount', value: bIT - bT, ship: 0 }
-          } 
-        })
-        await api.sessions.update(session.id, { batchConfigs: nC })
-      } else {
-        const iGT = orderItems.reduce((s, i) => s + i.price * i.quantity, 0)
-        const t = Number(finalTotal)
-        if (t && t >= 0) { 
-          const dV = t < iGT ? iGT - t : 0
-          const sF = t > iGT ? t - iGT : 0
-          await api.sessions.update(session.id, { 
-            discountType: 'amount', 
-            discountValue: dV, 
-            shippingFee: sF 
-          })
-        } 
-      }
-      setHostControlsOpen(false)
+      await api.sessions.claimHost(session.slug, recoverySecret, myName)
+      setRecoveryModalOpen(false)
+      setRecoverySecret('')
+    } catch (e: any) {
+      setRecoveryError(e.message)
+      const match = e.message.match(/(\d+) giây/)
+      if (match) setRemainingSeconds(parseInt(match[1]))
     } finally { setIsLoading(false) }
-  }, [session, orderBatches, batchFinalTotals, orderItems, finalTotal])
+  }, [session.slug, recoverySecret, myParticipantId, participants])
 
-  const verifyPassword = useCallback(async () => {
+  const deleteItem = useCallback(async (itemId: string) => { 
+    try { await api.orderItems.delete(itemId) } catch { } 
+  }, [])
+
+  const startEdit = useCallback((item: OrderItemType) => { 
+    setEditingItemId(item.id)
+    setEditDraft({ 
+      itemName: item.itemName, price: String(item.price), quantity: String(item.quantity), 
+      note: item.note || '', ice: item.ice || '50%', sugar: item.sugar || '50%', 
+      orderBatchId: item.orderBatchId, paySeparate: !!item.paySeparate 
+    }) 
+  }, [])
+
+  const saveEdit = useCallback(async (itemId: string) => { 
+    if (Number(editDraft.price) % 100 !== 0) { showWarning('Số tiền không hợp lệ', 'Vui lòng nhập số tiền chia hết cho 100'); return } 
+    setIsLoading(true)
+    try { 
+      await api.orderItems.update(itemId, { 
+        sessionId: session.id,
+        participantId: myParticipantId!,
+        itemName: editDraft.itemName, 
+        price: Number(editDraft.price), 
+        quantity: Number(editDraft.quantity), 
+        note: editDraft.note || null, 
+        ice: editDraft.ice || null, 
+        sugar: editDraft.sugar || null, 
+        orderBatchId: editDraft.orderBatchId, 
+        paySeparate: !!editDraft.paySeparate 
+      })
+      setEditingItemId(null)
+    } finally { setIsLoading(false) } 
+  }, [editDraft, session.id, myParticipantId, showWarning])
+
+
+  const addItem = useCallback(async (data: any) => { 
+    if (Number(data.price) % 100 !== 0) { showWarning('Số tiền không hợp lệ', 'Vui lòng nhập số tiền chia hết cho 100'); return } 
+    if (!myParticipantId) return 
+    setIsLoading(true)
+    try { 
+      await api.orderItems.create({ 
+        sessionId: session.id, participantId: myParticipantId, itemName: data.itemName, 
+        price: Number(data.price), quantity: data.quantity, note: data.note || null, 
+        ice: data.ice || null, sugar: data.sugar || null, 
+        orderBatchId: data.orderBatchId, paySeparate: !!data.paySeparate 
+      })
+      addItemForm.reset({ ...addItemForm.getValues(), itemName: '', price: '' as any, note: '' })
+      setJustAdded(true)
+      setTimeout(() => setJustAdded(false), 2000)
+    } finally { setIsLoading(false) } 
+  }, [session.id, myParticipantId, addItemForm, showWarning])
+
+  const verifyPassword = useCallback(async () => { 
     setCheckingPassword(true)
-    try {
+    try { 
       await api.sessions.verifyPassword(session.slug, passwordInput)
       sessionStorage.setItem(`sessionVerified_${session.id}`, 'true')
-      setPasswordVerified(true)
-    } catch (e: any) {
-      setPasswordError(e.message || 'Sai mật khẩu')
-    } finally { setCheckingPassword(false) }
+      setPasswordVerified(true) 
+    } catch (e: any) { setPasswordError(e.message || 'Sai mật khẩu') } 
+    finally { setCheckingPassword(false) } 
   }, [session, passwordInput])
 
-  const handleScanQR = useCallback(async (file: File) => {
+  const handleScanQR = useCallback(async (file: File) => { 
     setIsProcessingQR(true)
-    try {
+    try { 
       const reader = new FileReader()
-      reader.onload = (e) => {
+      reader.onload = (e) => { 
         const img = new Image()
-        img.onload = () => {
+        img.onload = () => { 
           const canvas = document.createElement('canvas')
           canvas.width = img.width
-          canvas.height = img.height
+          canvas.height = img.height 
           const ctx = canvas.getContext('2d')
           if (!ctx) return
           ctx.drawImage(img, 0, 0)
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
           const code = jsQR(imageData.data, canvas.width, canvas.height)
-          if (code) {
+          if (code) { 
             const result = parseVietQR(code.data)
-            if (result.bankAccount && result.bankName) {
-              if (selectedBatchId) {
-                onUpdateBatchBank(selectedBatchId, result.bankName, result.bankAccount, code.data)
-              } else {
+            if (result.bankAccount && result.bankName) { 
+              if (selectedBatchId) onUpdateBatchBank(selectedBatchId, result.bankName, result.bankAccount, code.data)
+              else { 
                 setBankNameInput(result.bankName)
                 setBankAccountInput(result.bankAccount)
-                onSaveGlobalBank(result.bankName, result.bankAccount)
-              }
-              // Toast or small notification instead of alert
+                onSaveGlobalBank(result.bankName, result.bankAccount) 
+              } 
               setShowChangeToast(true)
-              setTimeout(() => setShowChangeToast(false), 3000)
-            } else {
-              showWarning('Không tìm thấy STK', 'Nhận diện được mã nhưng không tìm thấy số tài khoản hợp lệ.')
-            }
-          } else {
-            showWarning('Lỗi quét mã', 'Không nhận diện được mã QR. Bạn hãy thử chụp lại rõ hơn nhé!')
-          }
+              setTimeout(() => setShowChangeToast(false), 3000) 
+            } else showWarning('Không tìm thấy STK', 'Nhận diện được mã nhưng không tìm thấy số tài khoản hợp lệ.') 
+          } else showWarning('Lỗi quét mã', 'Không nhận diện được mã QR.') 
         }
         img.src = e.target?.result as string
-        setQrPreviewUrl(e.target?.result as string)
+        setQrPreviewUrl(e.target?.result as string) 
       }
-      reader.readAsDataURL(file)
-    } finally {
-      setIsProcessingQR(false)
-      setShowActionSheet(false)
-    }
-  }, [selectedBatchId, onUpdateBatchBank, onSaveGlobalBank])
+      reader.readAsDataURL(file) 
+    } finally { setIsProcessingQR(false); setShowActionSheet(false) } 
+  }, [selectedBatchId, onUpdateBatchBank, onSaveGlobalBank, showWarning])
 
-  // 5. Derived State
-  const billEntries: BillEntry[] = calculateBill(session, participants, orderItems, orderBatches)
+  const shareLink = useCallback(() => { 
+    const url = window.location.href
+    if (navigator.share) navigator.share({ title: session.title, url })
+    else { 
+      copyToClipboard(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } 
+  }, [session.title, copyToClipboard])
+
+  const copySessionId = useCallback(() => { 
+    copyToClipboard(session.slug)
+    setCopiedId(true)
+    setTimeout(() => setCopiedId(false), 2000)
+  }, [session.slug, copyToClipboard])
+
+  const lockOrder = useCallback(() => { 
+    if (!session.hostDefaultBankAccount || !session.hostDefaultBankName) { 
+      showWarning('Thiếu thông tin Bank', 'Vui lòng bổ sung STK và Ngân hàng của Host.')
+      setHostControlsOpen(true)
+      return 
+    }
+    updateSessionStatus('locked', 'Chốt đơn?', 'Guest sẽ không thể thêm/sửa món.') 
+  }, [session, updateSessionStatus, showWarning])
+
+  const unlockOrder = useCallback(() => updateSessionStatus('open', 'Mở lại đơn?', 'Guest có thể tiếp tục đặt món.'), [updateSessionStatus])
+  const placeOrder = useCallback(() => updateSessionStatus('ordered', 'Đã đặt hàng?', 'Xác nhận bạn đã đặt món với quán.'), [updateSessionStatus])
+  const startSettle = useCallback(() => updateSessionStatus('settling', 'Thu tiền?', 'Bắt đầu tính toán bill và hiển thị QR thanh toán.'), [updateSessionStatus])
+  const completeSession = useCallback(() => updateSessionStatus('completed', 'Hoàn thành?', 'Đánh dấu session đã kết thúc.', 'primary'), [updateSessionStatus])
+  const cancelSession = useCallback(() => updateSessionStatus('cancelled', 'Hủy phòng?', 'Tất cả dữ liệu sẽ bị khóa và không thể khôi phục.', 'destructive'), [updateSessionStatus])
+
+  // --- 4. HOOKS: DERIVED STATE ---
+  const billEntries: BillEntry[] = useMemo(() => { 
+    if (calculatedBill && calculatedBill.participants) {
+      return calculatedBill.participants.map((p: any) => ({ 
+        participant: participants.find(part => part.id === p.participantId) || { id: p.participantId, name: p.name, isHost: p.isHost }, 
+        items: p.items.map((i: any) => ({ itemId: i.itemId, itemName: i.itemName, price: i.price, quantity: i.quantity, roundedPrice: i.roundedPrice, isPaySeparate: i.isPaySeparate })), 
+        subtotal: p.subtotal, residual: p.residual, total: p.finalAmount 
+      }))
+    }
+    return calculateBill(session, participants, orderItems, orderBatches) 
+  }, [session, participants, orderItems, orderBatches, calculatedBill])
+
   const myBill = billEntries.find(e => e.participant.id === myParticipantId)
   const canEdit = session.status === 'open'
 
+  // --- 5. HOOKS: EFFECTS ---
+  useEffect(() => {
+    if (remainingSeconds === null || remainingSeconds <= 0) return
+    const timer = setInterval(() => { 
+      setRemainingSeconds(prev => (prev && prev > 0) ? prev - 1 : null) 
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [remainingSeconds])
+
+  useEffect(() => {
+    if (session.status === 'settling' || session.status === 'completed') fetchBill()
+  }, [session.status, fetchBill, orderItems, participants])
+
+  useEffect(() => {
+    setMounted(true)
+    const amHost = isHost(initialSession.hostDeviceId)
+    setIAmHost(amHost)
+    if (initialSession.hasPassword) {
+      const isVerified = sessionStorage.getItem(`sessionVerified_${initialSession.id}`) === 'true'
+      if (!amHost && !isVerified) setPasswordVerified(false)
+    }
+    const savedPid = getParticipantId(initialSession.id)
+    if (savedPid) {
+      setMyParticipantId(savedPid)
+      setExpandedParticipant(savedPid)
+      api.participants.heartbeat(savedPid).catch(err => {
+        if (err.message.includes('unauthorized')) setKickedByOtherDevice(true)
+      })
+    } else if (amHost) {
+      const hostP = initialParticipants.find(p => p.isHost)
+      if (hostP) { 
+        setParticipantId(initialSession.id, hostP.id)
+        setMyParticipantId(hostP.id)
+        setExpandedParticipant(hostP.id) 
+      } else setNameModalOpen(true)
+    } else setNameModalOpen(true)
+
+    if (amHost && getHostSecret(initialSession.slug) && sessionStorage.getItem(`newlyCreated_${initialSession.id}`) === 'true') {
+      setShowHostSecretToast(true)
+    }
+  }, [initialSession, initialParticipants])
+
+  useEffect(() => {
+    if (!mounted) return
+    const ws = createWS(session.id)
+    ws.onopen = () => fetchLatestData()
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data)
+        const payload = msg.payload
+        switch (msg.type) {
+          case 'session_updated': setSession(prev => ({ ...prev, ...payload })); break
+          case 'session_cancelled': setSession(prev => ({ ...prev, status: 'cancelled' })); break
+          case 'session_deleted': window.location.href = '/'; break
+          case 'participant_created': setParticipants(prev => prev.some(p => p.id === payload.id) ? prev : [...prev, payload]); break
+          case 'participant_updated': setParticipants(prev => prev.map(p => p.id === payload.id ? { ...p, ...payload } : p)); break
+          case 'order_item_created': setOrderItems(prev => prev.some(i => i.id === payload.id) ? prev : [...prev, payload]); break
+          case 'order_item_updated': setOrderItems(prev => prev.map(i => i.id === payload.id ? payload : i)); break
+          case 'order_item_deleted': setOrderItems(prev => prev.filter(i => i.id !== payload.id)); break
+          case 'order_batch_created': setOrderBatches(prev => prev.some(b => b.id === payload.id) ? prev : [...prev, payload]); break
+          case 'order_batch_updated': setOrderBatches(prev => prev.map(b => b.id === payload.id ? payload : b)); break
+          case 'order_batch_deleted': setOrderBatches(prev => prev.filter(b => b.id !== payload.id)); break
+          case 'host_changed':
+            const isMeNewHost = isHost(payload.newHostDeviceID)
+            if (iAmHost && !isMeNewHost) setKickedByOtherDevice(true)
+            setSession(prev => ({ ...prev, hostDeviceId: payload.newHostDeviceID }))
+            setIAmHost(isMeNewHost)
+            setShowChangeToast(true)
+            fetchLatestData()
+            break
+        }
+      } catch (e) { console.error('WS parse error:', e) }
+    }
+    const heartbeatTimer = setInterval(() => {
+      const pid = getParticipantId(session.id)
+      if (pid) api.participants.heartbeat(pid).catch(err => {
+        if (err.message.includes('unauthorized')) setKickedByOtherDevice(true)
+      })
+    }, 30000)
+    return () => { ws.close(); clearInterval(heartbeatTimer) }
+  }, [mounted, session.id, iAmHost, fetchLatestData])
+
+  // --- 6. RENDER: EARLY RETURNS ---
   if (!passwordVerified) return (
     <div className="min-h-dvh flex items-center justify-center px-4">
       <Card className="w-full max-w-sm rounded-[2.5rem] bg-slate-900 border-white/10 p-6 shadow-2xl">
         <CardHeader className="text-center pb-3">
-          <div className="mx-auto w-12 h-12 bg-sky-500/20 border border-sky-500/30 rounded-2xl flex items-center justify-center mb-3"><Lock className="w-6 h-6 text-sky-400" /></div>
+          <div className="mx-auto w-12 h-12 bg-sky-500/20 border border-sky-500/30 rounded-2xl flex items-center justify-center mb-3">
+            <Lock className="w-6 h-6 text-sky-400" />
+          </div>
           <CardTitle className="text-lg">Đơn có mật khẩu</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -667,6 +612,7 @@ export default function SessionClient({ initialSession, initialParticipants, ini
     </div>
   )
 
+  // --- 7. RENDER: MAIN UI ---
   return (
     <div className="min-h-dvh pb-8">
       <header className="sticky top-0 z-30 glass border-b border-white/10 px-4 py-3">
@@ -695,31 +641,6 @@ export default function SessionClient({ initialSession, initialParticipants, ini
       </header>
 
       <div className="max-w-2xl mx-auto px-4 pt-3 flex flex-col gap-3">
-        {showChangeToast && (
-          <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 animate-in slide-in-from-top-2">
-            <div className="flex items-center gap-3">
-              <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-              <p className="text-sm font-bold">Quyền Host đã được cập nhật!</p>
-            </div>
-            <button onClick={() => setShowChangeToast(false)}><XCircle className="w-4 h-4 text-emerald-500/40" /></button>
-          </div>
-        )}
-
-        {session.status === 'cancelled' && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
-            <Card className="w-full max-w-sm rounded-[2.5rem] bg-slate-900 border-rose-500/20 p-8 text-center shadow-2xl">
-              <div className="mx-auto w-20 h-20 bg-rose-500/20 rounded-full flex items-center justify-center mb-6">
-                <XCircle className="w-10 h-10 text-rose-500" />
-              </div>
-              <h2 className="text-2xl font-black text-white mb-2">PHÒNG ĐÃ BỊ HỦY</h2>
-              <p className="text-white/60 mb-8">Rất tiếc, Host đã hủy phiên đặt trà sữa này.</p>
-              <Button asChild className="w-full h-12 rounded-2xl font-bold bg-white text-slate-950 hover:bg-white/90">
-                <a href="/">Về trang chủ</a>
-              </Button>
-            </Card>
-          </div>
-        )}
-
         {session.status !== 'open' && session.status !== 'cancelled' && myBill && !myBill.participant.isPaid && myBill.total > 0 && ( 
           <div className="bg-gradient-to-r from-sky-600/30 to-indigo-600/30 border border-sky-500/30 rounded-[2.5rem] p-6 text-center shadow-2xl"> 
             <p className="text-sm text-white/70 mb-1">Bạn cần thanh toán</p> 
@@ -727,17 +648,6 @@ export default function SessionClient({ initialSession, initialParticipants, ini
           </div> 
         )}
 
-        {/* Host Secret Toast (The 10s Inline Window) */}
-        {showHostSecretToast && getHostSecret(session.slug) && (
-          <HostSecretToast 
-            secretCode={getHostSecret(session.slug)!} 
-            onClose={() => {
-              setShowHostSecretToast(false)
-              sessionStorage.removeItem(`newlyCreated_${session.id}`)
-            }} 
-          />
-        )}
-        
         {canEdit && ( 
           <Card className="rounded-[2.5rem] border-white/5 bg-white/[0.02]"> 
             <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><ShoppingCart className="w-4 h-4 text-sky-400" />Gọi của bạn</CardTitle></CardHeader> 
@@ -811,11 +721,7 @@ export default function SessionClient({ initialSession, initialParticipants, ini
           </div> 
         )}
 
-        {/* Recovery Button: Only shown if current participant name matches the host's name but device ID doesn't */}
-        {!iAmHost && 
-         session.status !== 'completed' && 
-         session.status !== 'cancelled' && 
-         participants.find(p => p.id === myParticipantId)?.name === participants.find(p => p.isHost)?.name && (
+        {!iAmHost && session.status !== 'completed' && session.status !== 'cancelled' && participants.find(p => p.id === myParticipantId)?.name === participants.find(p => p.isHost)?.name && (
           <button onClick={() => setRecoveryModalOpen(true)} className="mt-4 text-[10px] text-white/20 hover:text-sky-400 uppercase font-black text-center w-full flex items-center justify-center gap-1.5 transition-colors">
             <Crown className="w-3 h-3" /> Bạn là {participants.find(p => p.isHost)?.name}? Khôi phục quyền Host
           </button>
@@ -852,21 +758,29 @@ export default function SessionClient({ initialSession, initialParticipants, ini
         <DialogContent className="rounded-[2.5rem] bg-slate-900 border-white/10">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Crown className="w-5 h-5 text-amber-400" /> Khôi phục quyền Host</DialogTitle>
-            <DialogDescription>Nhập mã quản trị để lấy lại quyền quản lý phòng này.</DialogDescription>
+            <DialogDescription>{remainingSeconds !== null && remainingSeconds > 0 ? `Thiết bị cũ vẫn đang mở. Vui lòng đợi ${remainingSeconds}s...` : "Nhập mã quản trị để lấy lại quyền quản lý phòng này."}</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3">
-            <Input 
-              placeholder="Mã quản trị (6 ký tự)" 
-              value={recoverySecret} 
-              onChange={e => { setRecoverySecret(e.target.value.toUpperCase()); setRecoveryError('') }} 
-              className="rounded-2xl h-12 font-mono text-center text-lg tracking-widest"
-              maxLength={6}
-            />
+            <Input placeholder="Mã quản trị (6 ký tự)" value={recoverySecret} onChange={e => { setRecoverySecret(e.target.value.toUpperCase()); setRecoveryError('') }} className="rounded-2xl h-12 font-mono text-center text-lg tracking-widest" maxLength={6} disabled={remainingSeconds !== null && remainingSeconds > 0} />
             {recoveryError && <p className="text-xs text-rose-400 bg-rose-500/10 p-2 rounded-lg">{recoveryError}</p>}
           </div>
           <DialogFooter>
-            <Button onClick={claimHost} disabled={isLoading || recoverySecret.length < 6} className="w-full rounded-2xl h-12 font-bold bg-blue-600 uppercase">Xác nhận khôi phục</Button>
+            <Button onClick={claimHost} disabled={isLoading || recoverySecret.length < 6 || (remainingSeconds !== null && remainingSeconds > 0)} className="w-full rounded-2xl h-12 font-bold bg-blue-600 uppercase">
+              {remainingSeconds !== null && remainingSeconds > 0 ? `Chờ ${remainingSeconds}s` : "Xác nhận khôi phục"}
+            </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={kickedByOtherDevice} onOpenChange={() => {}}>
+        <DialogContent className="[&>button:last-child]:hidden rounded-[2.5rem] bg-slate-900 border-rose-500/20 p-8 text-center shadow-2xl">
+          <div className="mx-auto w-20 h-20 bg-rose-500/20 rounded-full flex items-center justify-center mb-6"><Shield className="w-10 h-10 text-rose-500" /></div>
+          <h2 className="text-xl font-black text-white mb-2 uppercase">PHIÊN HẾT HẠN</h2>
+          <p className="text-white/60 mb-8 text-sm leading-relaxed">Bạn đã chuyển sang quản lý phòng trên một thiết bị khác. Để tiếp tục xem hoặc đặt món tại đây, hãy nhấn nút bên dưới để tham gia lại nhé! ☕</p>
+          <div className="flex flex-col gap-2">
+            <Button className="w-full h-12 rounded-2xl font-bold bg-sky-600 hover:bg-sky-500" onClick={() => { localStorage.removeItem(`participantId_${session.id}`); setMyParticipantId(null); setKickedByOtherDevice(false); setNameModalOpen(true) }}>Ở lại làm Guest</Button>
+            <Button variant="ghost" className="w-full h-12 rounded-2xl font-bold text-white/40 hover:text-white" onClick={() => window.location.href = '/'}>Quay về trang chủ</Button>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -874,6 +788,9 @@ export default function SessionClient({ initialSession, initialParticipants, ini
       <ActionSheet isOpen={showActionSheet} onClose={() => setShowActionSheet(false)} title={selectedBatchId ? "Quét QR đơn" : "Quét QR Host"} options={[{ label: "Chụp ảnh", icon: <Camera className="w-5 h-5 text-sky-400" />, onClick: () => cameraInputRef.current?.click() }, { label: "Thư viện", icon: <ImageIcon className="w-5 h-5 text-emerald-400" />, onClick: () => fileInputRef.current?.click() }]} />
       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && handleScanQR(e.target.files[0])} />
       <input type="file" ref={cameraInputRef} className="hidden" accept="image/*" capture="environment" onChange={e => e.target.files?.[0] && handleScanQR(e.target.files[0])} />
+
+      {showChangeToast && <Toast message="Quyền Host đã được cập nhật!" type="success" onClose={() => setShowChangeToast(false)} />}
+      {showHostSecretToast && getHostSecret(session.slug) && <HostSecretToast secretCode={getHostSecret(session.slug)!} onClose={() => { setShowHostSecretToast(false); sessionStorage.removeItem(`newlyCreated_${session.id}`) }} />}
     </div>
   )
 }
